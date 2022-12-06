@@ -61,6 +61,7 @@ fn aux_one(file: &Path) -> i32 {
     score
 }
 
+/// Function for part 02
 fn aux_two(file: &Path) -> i32 {
     // Open file
     let file = File::open(file).unwrap();
