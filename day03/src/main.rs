@@ -4,19 +4,27 @@ use std::io::{stdin, BufRead, BufReader};
 use std::path::Path;
 
 /// Function for part 01
-fn aux_one(file: &Path) -> i32 {
+fn aux_one(file: &Path) -> u32 {
     // Open file
     let file = File::open(file).unwrap();
 
     let reader = BufReader::new(file);
 
+    // Final result
     let mut score: u32 = 0;
+
+    // Vec with only the duplicated letter
+    let mut duplicated_letters = Vec::new();
+
+    // Checks if duplicate letter found
+    let mut found = false;
 
     // Read file line by line, for part 01
     for (_index, line) in reader.lines().enumerate() {
         // Sum scores
         match line.unwrap().trim().parse::<String>() {
             Ok(elt) => {
+                // Split line in two
                 let mut part_one: Vec<_> = elt.chars().collect();
                 let part_two = part_one.split_off(part_one.len() / 2);
                 // 'a' as u32 = 97
@@ -26,58 +34,46 @@ fn aux_one(file: &Path) -> i32 {
 
                 for elt_one in part_one {
                     for elt_two in part_two.iter() {
-                        if &elt_one == elt_two {
-                            let ascii_value = elt_one as u32;
-                            // If uppercase
-                            if ascii_value < 91 && ascii_value > 64 {
-                                score = score + ascii_value - 65 + 27
-                            } else if ascii_value < 123 && ascii_value > 96 {
-                                score = score + ascii_value - 96
-                            } else {
-                                panic!("Expected latin letters, found {elt_one}");
-                            }
+                        if &elt_one == elt_two && !found {
+                            duplicated_letters.push(elt_one);
+                            found = !found;
                             break;
                         }
                     }
+                    if found {
+                        break;
+                    }
                 }
-
-                // score = score
-                //     + part_one
-                //         .iter()
-                //         .map(|a| {
-                //             let result: u32 = part_two
-                //                 .iter()
-                //                 .filter_map(|b| {
-                //                     if *a == *b {
-                //                         let ascii_value = *a as u32;
-                //                         // If uppercase
-                //                         if ascii_value < 91 && ascii_value > 64 {
-                //                             Some(ascii_value - 65 + 27)
-                //                         } else if ascii_value < 123 && ascii_value > 96 {
-                //                             Some(ascii_value - 96)
-                //                         } else {
-                //                             None
-                //                         }
-                //                     } else {
-                //                         None
-                //                     }
-                //                 })
-                //                 .sum();
-                //             result
-                //         })
-                //         .sum::<u32>();
             }
             Err(_) => {}
         }
+
+        found = !found;
     }
 
-    println!("Score: {score}");
+    println!("Vec: {:?}", duplicated_letters);
 
-    0
+    score = score
+        + duplicated_letters
+            .iter()
+            .filter_map(|a: &char| {
+                let ascii_value = *a as u32;
+                // If uppercase or lowercase latin letter
+                if ascii_value < 91 && ascii_value > 64 {
+                    Some(ascii_value - 65 + 27)
+                } else if ascii_value < 123 && ascii_value > 96 {
+                    Some(ascii_value - 96)
+                } else {
+                    None
+                }
+            })
+            .sum::<u32>();
+
+    score
 }
 
 /// Function for part 02
-fn aux_two(file: &Path) -> i32 {
+fn aux_two(file: &Path) -> u32 {
     // Open file
     let file = File::open(file).unwrap();
 
@@ -127,7 +123,7 @@ mod tests {
 
     #[test]
     fn internal() {
-        // assert_eq!(aux_one(Path::new("input/test.txt")), 157);
+        assert_eq!(aux_one(Path::new("input/test.txt")), 157);
         // assert_eq!(aux_two(Path::new("input/test.txt")), 12);
     }
 }
