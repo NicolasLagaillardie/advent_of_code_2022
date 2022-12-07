@@ -1,48 +1,132 @@
 use core::panic;
+use regex::Regex;
 use std::fs::File;
 use std::io::{stdin, BufRead, BufReader};
 use std::path::Path;
-
-// Get all the stacks, one by one
-fn get_stacks() -> Vec<char> {
-    
-}
+use std::str::from_utf8;
 
 /// Function for part 01
-fn aux_one(file: &Path) -> &str {
+fn aux_one(file: &Path) -> String {
+    // Store stacks
+    let mut stacks: Vec<Vec<String>> = Vec::new();
+
     // Open file
     let file = File::open(file).unwrap();
 
     let reader = BufReader::new(file);
 
-    // Number of overlaps
-    let mut overlaps = 0;
-
     // Read file line by line, for part 01
-    for (_index, line) in reader.lines().enumerate() {
-        // Sum scores
-        match line.unwrap().trim().parse::<String>() {
-            Ok(elt) => {
-                let elves = elt.split(",").collect::<Vec<&str>>();
-                let elf_one = bounds(elves[0]);
-                let elf_two = bounds(elves[1]);
+    for (_index_line, line) in reader.lines().enumerate() {
+        let line = line.unwrap();
 
-                if (elf_one.0 <= elf_two.0 && elf_one.1 >= elf_two.1)
-                    || (elf_two.0 <= elf_one.0 && elf_two.1 >= elf_one.1)
-                {
-                    overlaps += 1;
+        // If we are in the stack definition
+        if line.contains('[') {
+            let line = line.as_bytes();
+
+            for (index_elt, elt) in line.iter().enumerate() {
+                if index_elt % 4 == 1 {
+                    if elt == &32 && stacks.len() <= (index_elt - 1) / 4 {
+                        stacks.push(Vec::new());
+                    } else if elt != &32 && stacks.len() <= (index_elt - 1) / 4 {
+                        stacks.push(Vec::new());
+                        stacks[(index_elt - 1) / 4].push(from_utf8(&[*elt]).unwrap().to_string());
+                    } else if elt != &32 {
+                        stacks[(index_elt - 1) / 4].push(from_utf8(&[*elt]).unwrap().to_string());
+                    }
                 }
             }
-            Err(_) => {}
+        } else if line.contains("move") {
+            // Extract digits from instruction line
+            let re = Regex::new(r" (\d+)").unwrap();
+            let mut instructions = Vec::new();
+            for cap in re.captures_iter(&line) {
+                instructions.push(cap[0].to_string().trim().parse().unwrap());
+            }
+
+            // Move the elements
+            for _i in 0..instructions[0] {
+                let elt = stacks[instructions[1] - 1].remove(0);
+                stacks[instructions[2] - 1].insert(0, elt);
+            }
         }
     }
 
-    "CMZ"
+    // Get head of each stacks and concat them
+    let mut heads = Vec::new();
+
+    for elt in stacks.iter() {
+        if !elt.is_empty() {
+            heads.push(elt[0].to_string());
+        }
+    }
+
+    let final_result = heads.iter().cloned().collect::<String>();
+
+    final_result
 }
 
 /// Function for part 02
-fn aux_two(file: &Path) -> &str {
-    "CMZ"
+fn aux_two(file: &Path) -> String {
+    // Store stacks
+    let mut stacks: Vec<Vec<String>> = Vec::new();
+
+    // Open file
+    let file = File::open(file).unwrap();
+
+    let reader = BufReader::new(file);
+
+    // Read file line by line, for part 01
+    for (_index_line, line) in reader.lines().enumerate() {
+        let line = line.unwrap();
+
+        // If we are in the stack definition
+        if line.contains('[') {
+            let line = line.as_bytes();
+
+            for (index_elt, elt) in line.iter().enumerate() {
+                if index_elt % 4 == 1 {
+                    if elt == &32 && stacks.len() <= (index_elt - 1) / 4 {
+                        stacks.push(Vec::new());
+                    } else if elt != &32 && stacks.len() <= (index_elt - 1) / 4 {
+                        stacks.push(Vec::new());
+                        stacks[(index_elt - 1) / 4].push(from_utf8(&[*elt]).unwrap().to_string());
+                    } else if elt != &32 {
+                        stacks[(index_elt - 1) / 4].push(from_utf8(&[*elt]).unwrap().to_string());
+                    }
+                }
+            }
+        } else if line.contains("move") {
+            // Extract digits from instruction line
+            let re = Regex::new(r" (\d+)").unwrap();
+            let mut instructions = Vec::new();
+            for cap in re.captures_iter(&line) {
+                instructions.push(cap[0].to_string().trim().parse().unwrap());
+            }
+
+            // Move the elements
+            let mut temp_stack = Vec::new();
+            for _i in 0..instructions[0] {
+                temp_stack.push(stacks[instructions[1] - 1].remove(0));
+            }
+            temp_stack.reverse();
+            for elt in temp_stack.iter() {
+                stacks[instructions[2] - 1].insert(0, elt.to_string());
+            }
+        }
+    }
+
+    // Get head of each stacks and concat them
+    let mut heads = Vec::new();
+
+    for elt in stacks.iter() {
+        if !elt.is_empty() {
+            heads.push(elt[0].to_string());
+        }
+    }
+
+    let final_result = heads.iter().cloned().collect::<String>();
+    
+    final_result
 }
 
 /// Main function
@@ -75,7 +159,7 @@ fn main() {
     };
 
     // Display total score
-    println!("Result: {}", result);
+    println!("Result: {:?}", result);
 }
 
 #[cfg(test)]
@@ -85,6 +169,6 @@ mod tests {
     #[test]
     fn internal() {
         assert_eq!(aux_one(Path::new("input/test.txt")), "CMZ");
-        // assert_eq!(aux_two(Path::new("input/test.txt")), 4);
+        assert_eq!(aux_two(Path::new("input/test.txt")), "MCD");
     }
 }
