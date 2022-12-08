@@ -35,8 +35,10 @@ fn aux_one(file: &Path) -> i32 {
 
     let reader = BufReader::new(file);
 
+    // Set current path when exploring directories
     let mut current_path = "";
 
+    // Because I have some issues with borrowing values
     let mut temp_string;
 
     // Read file line by line, for part 01
@@ -155,8 +157,10 @@ fn aux_two(file: &Path) -> i32 {
 
     let reader = BufReader::new(file);
 
+    // Set current path when exploring directories
     let mut current_path = "";
 
+    // Because I have some issues with borrowing values
     let mut temp_string;
 
     // Read file line by line, for part 02
@@ -259,8 +263,10 @@ fn aux_two(file: &Path) -> i32 {
         }
     }
 
+    // Set threshold to know what space to free
     let threshold = 30000000 - (70000000 - max_value);
 
+    // Retrieve smallest size of directory bigger than the threshold
     for (_key, value) in final_weights {
         if value > threshold {
             if value < max_value {
