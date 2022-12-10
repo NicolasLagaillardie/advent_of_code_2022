@@ -31,8 +31,6 @@ fn aux_one(file: &Path) -> usize {
                 .into_iter()
                 .map(|elt| elt)
                 .collect::<HashSet<_>>()
-                .into_iter()
-                .collect::<Vec<char>>()
                 .len()
                 != 4
         {
