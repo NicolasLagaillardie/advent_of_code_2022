@@ -1,45 +1,88 @@
 use core::panic;
-use std::cmp::max;
-use std::collections::HashSet;
 use std::fs::File;
 use std::io::{stdin, BufRead, BufReader};
 use std::path::Path;
 
 /// Function for part 01
-fn aux_one(file: &Path) -> usize {
+fn aux_one(file: &Path) -> i32 {
     // Open file
     let file = File::open(file).unwrap();
 
     let reader = BufReader::new(file);
 
+    let mut x = 1;
+
     let mut result = 0;
+
+    let mut current_cycle = 0;
 
     // Read file line by line, for part 01
     for (_index_line, line) in reader.lines().enumerate() {
         // Split line into direction and steps
         let line = line.unwrap();
-        let instruction = line.split(' ').collect::<Vec<&str>>();
+        let line = line.split(' ').collect::<Vec<&str>>();
 
-        let direction = instruction[0];
-        let steps = instruction[1].parse::<i32>().unwrap();
-        
+        let instruction = line[0];
 
+        match instruction {
+            "noop" => {
+                current_cycle += 1;
+                if current_cycle == 20
+                    || current_cycle == 60
+                    || current_cycle == 100
+                    || current_cycle == 140
+                    || current_cycle == 180
+                    || current_cycle == 220
+                {
+                    result += current_cycle * x;
+                }
+            }
+
+            "addx" => {
+                let steps = line[1].parse::<i32>().unwrap();
+
+                current_cycle += 1;
+
+                if current_cycle == 20
+                    || current_cycle == 60
+                    || current_cycle == 100
+                    || current_cycle == 140
+                    || current_cycle == 180
+                    || current_cycle == 220
+                {
+                    result += current_cycle * x;
+                }
+
+                current_cycle += 1;
+
+                if current_cycle == 20
+                    || current_cycle == 60
+                    || current_cycle == 100
+                    || current_cycle == 140
+                    || current_cycle == 180
+                    || current_cycle == 220
+                {
+                    result += current_cycle * x;
+                }
+
+                x += steps;
+            }
+
+            elt => panic!("Error, expected noop or addx, found {elt}"),
+        }
     }
 
     result
 }
 
 /// Function for part 02
-fn aux_two(file: &Path) -> usize {
+fn aux_two(file: &Path) -> i32 {
     // Open file
     let file = File::open(file).unwrap();
 
     let reader = BufReader::new(file);
 
-    let mut result = 0
-
-    // Stores explored cells
-    let mut node_09_explored_cells = vec![node_09_cell];
+    let mut result = 0;
 
     // Read file line by line, for part 01
     for (_index_line, line) in reader.lines().enumerate() {
@@ -93,7 +136,7 @@ mod tests {
 
     #[test]
     fn internal() {
-        assert_eq!(aux_one(Path::new("input/test01.txt")), 13);
-        assert_eq!(aux_two(Path::new("input/test02.txt")), 36);
+        assert_eq!(aux_one(Path::new("input/test.txt")), 13140);
+        // assert_eq!(aux_two(Path::new("input/test.txt")), 36);
     }
 }
