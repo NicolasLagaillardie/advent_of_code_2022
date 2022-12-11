@@ -27,6 +27,7 @@ fn aux_one(file: &Path) -> i32 {
         match instruction {
             "noop" => {
                 current_cycle += 1;
+
                 if current_cycle == 20
                     || current_cycle == 60
                     || current_cycle == 100
@@ -82,19 +83,69 @@ fn aux_two(file: &Path) -> i32 {
 
     let reader = BufReader::new(file);
 
-    let mut result = 0;
+    let mut crt = vec![vec!['.'; 40]; 6];
+
+    let mut current_cycle = 0;
+
+    let mut sprite_position: i32 = 0;
 
     // Read file line by line, for part 01
     for (_index_line, line) in reader.lines().enumerate() {
         // Split line into direction and steps
         let line = line.unwrap();
-        let instruction = line.split(' ').collect::<Vec<&str>>();
+        let line = line.split(' ').collect::<Vec<&str>>();
 
-        let direction = instruction[0];
-        let steps = instruction[1].parse::<i32>().unwrap();
+        let instruction = line[0];
+
+        println!("sprite_position: {sprite_position}");
+
+        match instruction {
+            "noop" => {
+                if sprite_position <= (current_cycle % 40)
+                    && (current_cycle % 40) <= sprite_position + 2
+                {
+                    crt[(current_cycle / 40) as usize][(current_cycle % 40) as usize] = '#';
+                }
+
+                current_cycle += 1;
+            }
+
+            "addx" => {
+                let steps = line[1].parse::<i32>().unwrap();
+
+                if sprite_position <= (current_cycle % 40)
+                    && (current_cycle % 40) <= sprite_position + 2
+                {
+                    crt[(current_cycle / 40) as usize][(current_cycle % 40) as usize] = '#';
+                }
+
+                current_cycle += 1;
+
+                if sprite_position <= (current_cycle % 40)
+                    && (current_cycle % 40) <= sprite_position + 2
+                {
+                    crt[(current_cycle / 40) as usize][(current_cycle % 40) as usize] = '#';
+                }
+
+                current_cycle += 1;
+
+                sprite_position += steps;
+
+                println!("steps: {steps}");
+            }
+
+            elt => panic!("Error, expected noop or addx, found {elt}"),
+        }
     }
 
-    result
+    println!("Line 0: {:?}", crt[0].iter().collect::<String>());
+    println!("Line 1: {:?}", crt[1].iter().collect::<String>());
+    println!("Line 2: {:?}", crt[2].iter().collect::<String>());
+    println!("Line 3: {:?}", crt[3].iter().collect::<String>());
+    println!("Line 4: {:?}", crt[4].iter().collect::<String>());
+    println!("Line 5: {:?}", crt[5].iter().collect::<String>());
+
+    0
 }
 
 /// Main function
