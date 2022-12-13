@@ -6,11 +6,11 @@ use std::path::Path;
 
 #[derive(Debug)]
 struct Monkey {
-    starting_items: Vec<i32>,
+    starting_items: Vec<i128>,
     operation: (String, String, String),
-    test: i32,
-    if_true: i32,
-    if_false: i32,
+    test: i128,
+    if_true: i128,
+    if_false: i128,
 }
 
 impl Monkey {
@@ -38,7 +38,7 @@ impl Clone for Monkey {
 }
 
 /// Function for part 01
-fn aux_one(file: &Path) -> i32 {
+fn aux_one(file: &Path) -> i128 {
     // Open file
     let file = File::open(file).unwrap();
 
@@ -48,7 +48,7 @@ fn aux_one(file: &Path) -> i32 {
     // Starting items = Vec<String>
     // Operation = String
     // (Test, True, False) = (String, String, String)
-    let mut monkeys = HashMap::<i32, Monkey>::new();
+    let mut monkeys = HashMap::<i128, Monkey>::new();
 
     // Stores current parsed monkey
     let mut current_monkey = 0;
@@ -64,11 +64,11 @@ fn aux_one(file: &Path) -> i32 {
             let line = line.iter().cloned().collect::<String>();
             let line = line.split(":").collect::<Vec<&str>>();
 
-            current_monkey = line[0].parse::<i32>().unwrap();
+            current_monkey = line[0].parse::<i128>().unwrap();
 
             let monkey = Monkey::new();
 
-            monkeys.insert(line[0].parse::<i32>().unwrap(), monkey);
+            monkeys.insert(line[0].parse::<i128>().unwrap(), monkey);
         } else if line.contains("Starting items: ") {
             let line = line.split("Starting items: ").collect::<Vec<&str>>();
             let line = line.iter().cloned().collect::<String>();
@@ -79,7 +79,7 @@ fn aux_one(file: &Path) -> i32 {
             let monkey = monkeys.get_mut(&current_monkey).unwrap();
 
             for elt in line {
-                monkey.starting_items.push(elt.parse::<i32>().unwrap());
+                monkey.starting_items.push(elt.parse::<i128>().unwrap());
             }
         } else if line.contains("Operation: new = ") {
             let line = line.split("Operation: new = ").collect::<Vec<&str>>();
@@ -100,7 +100,7 @@ fn aux_one(file: &Path) -> i32 {
 
             let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
 
-            monkey.test = line[1].parse::<i32>().unwrap();
+            monkey.test = line[1].parse::<i128>().unwrap();
         } else if line.contains("If true: throw to monkey ") {
             let line = line
                 .split("If true: throw to monkey ")
@@ -108,7 +108,7 @@ fn aux_one(file: &Path) -> i32 {
 
             let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
 
-            monkey.if_true = line[1].parse::<i32>().unwrap();
+            monkey.if_true = line[1].parse::<i128>().unwrap();
         } else if line.contains("If false: ") {
             let line = line
                 .split("If false: throw to monkey ")
@@ -116,7 +116,7 @@ fn aux_one(file: &Path) -> i32 {
 
             let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
 
-            monkey.if_false = line[1].parse::<i32>().unwrap();
+            monkey.if_false = line[1].parse::<i128>().unwrap();
         }
     }
 
@@ -130,7 +130,7 @@ fn aux_one(file: &Path) -> i32 {
         for monkey_index in 0..monkeys.len() {
             let mut clone_monkey = monkeys.clone();
 
-            let monkey = monkeys.get_mut(&(monkey_index as i32)).unwrap();
+            let monkey = monkeys.get_mut(&(monkey_index as i128)).unwrap();
 
             if monkey.operation.1.contains('+') {
                 if monkey.operation.0.contains("old") {
@@ -152,7 +152,7 @@ fn aux_one(file: &Path) -> i32 {
                             }
                         }
                     } else {
-                        let extract_right = monkey.operation.2.parse::<i32>().unwrap();
+                        let extract_right = monkey.operation.2.parse::<i128>().unwrap();
                         for elt in &monkey.starting_items {
                             let test = (elt + extract_right) / 3;
 
@@ -191,7 +191,7 @@ fn aux_one(file: &Path) -> i32 {
                             }
                         }
                     } else {
-                        let extract_right = monkey.operation.2.parse::<i32>().unwrap();
+                        let extract_right = monkey.operation.2.parse::<i128>().unwrap();
                         for elt in &monkey.starting_items {
                             let test = (elt * extract_right) / 3;
 
@@ -214,7 +214,7 @@ fn aux_one(file: &Path) -> i32 {
                 panic!("Error, expected + or *, found {}", monkey.operation.1);
             }
 
-            let monkey = clone_monkey.get_mut(&(monkey_index as i32)).unwrap();
+            let monkey = clone_monkey.get_mut(&(monkey_index as i128)).unwrap();
 
             monkey.starting_items = Vec::new();
 
@@ -238,26 +238,218 @@ fn aux_one(file: &Path) -> i32 {
     let maxi_0 = holded_objects.pop().unwrap();
     let maxi_1 = holded_objects.pop().unwrap();
 
-    println!("result: {:?}", maxi_0 * maxi_1);
-
     maxi_0 * maxi_1
 }
 
 /// Function for part 02
-fn aux_two(file: &Path) -> i32 {
+fn aux_two(file: &Path) -> i128 {
     // Open file
     let file = File::open(file).unwrap();
 
     let reader = BufReader::new(file);
 
+    // Store composition of every monkey
+    // Starting items = Vec<String>
+    // Operation = String
+    // (Test, True, False) = (String, String, String)
+    let mut monkeys = HashMap::<i128, Monkey>::new();
+
+    // Stores current parsed monkey
+    let mut current_monkey = 0;
+
+    // To keep business monkey low
+    let mut lowest_common_denominator = 1;
+
     // Read file line by line, for part 01
+    // Get composition of each monkey
     for (_index_line, line) in reader.lines().enumerate() {
         // Split line into direction and steps
         let line = line.unwrap();
-        let line = line.split(' ').collect::<Vec<&str>>();
+
+        if line.contains("Monkey") {
+            let line = line.split("Monkey ").collect::<Vec<&str>>();
+            let line = line.iter().cloned().collect::<String>();
+            let line = line.split(":").collect::<Vec<&str>>();
+
+            current_monkey = line[0].parse::<i128>().unwrap();
+
+            let monkey = Monkey::new();
+
+            monkeys.insert(line[0].parse::<i128>().unwrap(), monkey);
+        } else if line.contains("Starting items: ") {
+            let line = line.split("Starting items: ").collect::<Vec<&str>>();
+            let line = line.iter().cloned().collect::<String>();
+            let line = line.split(' ').collect::<Vec<&str>>();
+            let line = line.iter().cloned().collect::<String>();
+            let line = line.split(',').collect::<Vec<&str>>();
+
+            let monkey = monkeys.get_mut(&current_monkey).unwrap();
+
+            for elt in line {
+                monkey.starting_items.push(elt.parse::<i128>().unwrap());
+            }
+        } else if line.contains("Operation: new = ") {
+            let line = line.split("Operation: new = ").collect::<Vec<&str>>();
+            let line = line.iter().cloned().collect::<String>();
+            let line = line.trim();
+
+            let line = line.split(' ').collect::<Vec<&str>>();
+
+            let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
+
+            monkey.operation = (
+                line[0].to_string(),
+                line[1].to_string(),
+                line[2].to_string(),
+            );
+        } else if line.contains("Test: divisible by ") {
+            let line = line.split("Test: divisible by ").collect::<Vec<&str>>();
+
+            let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
+
+            monkey.test = line[1].parse::<i128>().unwrap();
+
+            lowest_common_denominator *= monkey.test;
+        } else if line.contains("If true: throw to monkey ") {
+            let line = line
+                .split("If true: throw to monkey ")
+                .collect::<Vec<&str>>();
+
+            let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
+
+            monkey.if_true = line[1].parse::<i128>().unwrap();
+        } else if line.contains("If false: ") {
+            let line = line
+                .split("If false: throw to monkey ")
+                .collect::<Vec<&str>>();
+
+            let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
+
+            monkey.if_false = line[1].parse::<i128>().unwrap();
+        }
     }
 
-    0
+    println!("monkeys: {:?}", monkeys);
+
+    let mut holded_objects = vec![0; monkeys.len()];
+
+    println!("lowest_common_denominator: {lowest_common_denominator}");
+
+    // For each round of the 10000 rounds
+    for index in 0..10000 {
+        // For each monkey, in the ascending order
+        for monkey_index in 0..monkeys.len() {
+            let mut clone_monkey = monkeys.clone();
+
+            let monkey = monkeys.get_mut(&(monkey_index as i128)).unwrap();
+
+            if monkey.operation.1.contains('+') {
+                if monkey.operation.0.contains("old") {
+                    if monkey.operation.2.contains("old") {
+                        for elt in &monkey.starting_items {
+                            let test = elt + elt;
+
+                            holded_objects[monkey_index] += 1;
+
+                            if test % monkey.test == 0 {
+                                let monkey_receive = clone_monkey.get_mut(&monkey.if_true).unwrap();
+
+                                monkey_receive.starting_items.push(test);
+                            } else {
+                                let monkey_receive =
+                                    clone_monkey.get_mut(&monkey.if_false).unwrap();
+
+                                monkey_receive.starting_items.push(test);
+                            }
+                        }
+                    } else {
+                        let extract_right = monkey.operation.2.parse::<i128>().unwrap();
+                        for elt in &monkey.starting_items {
+                            let test = elt + extract_right;
+
+                            holded_objects[monkey_index] += 1;
+
+                            if test % monkey.test == 0 {
+                                let monkey_receive = clone_monkey.get_mut(&monkey.if_true).unwrap();
+
+                                monkey_receive.starting_items.push(test);
+                            } else {
+                                let monkey_receive =
+                                    clone_monkey.get_mut(&monkey.if_false).unwrap();
+
+                                monkey_receive.starting_items.push(test);
+                            }
+                        }
+                    }
+                }
+            } else if monkey.operation.1.contains('*') {
+                if monkey.operation.0.contains("old") {
+                    if monkey.operation.2.contains("old") {
+                        for elt in &monkey.starting_items {
+                            let test = elt * elt;
+
+                            holded_objects[monkey_index] += 1;
+
+                            if test % monkey.test == 0 {
+                                let monkey_receive = clone_monkey.get_mut(&monkey.if_true).unwrap();
+
+                                monkey_receive.starting_items.push(test);
+                            } else {
+                                let monkey_receive =
+                                    clone_monkey.get_mut(&monkey.if_false).unwrap();
+
+                                monkey_receive.starting_items.push(test);
+                            }
+                        }
+                    } else {
+                        let extract_right = monkey.operation.2.parse::<i128>().unwrap();
+                        for elt in &monkey.starting_items {
+                            let test = elt * extract_right;
+
+                            holded_objects[monkey_index] += 1;
+
+                            if test % monkey.test == 0 {
+                                let monkey_receive = clone_monkey.get_mut(&monkey.if_true).unwrap();
+
+                                monkey_receive.starting_items.push(test);
+                            } else {
+                                let monkey_receive =
+                                    clone_monkey.get_mut(&monkey.if_false).unwrap();
+
+                                monkey_receive.starting_items.push(test);
+                            }
+                        }
+                    }
+                }
+            } else {
+                panic!("Error, expected + or *, found {}", monkey.operation.1);
+            }
+
+            let monkey = clone_monkey.get_mut(&(monkey_index as i128)).unwrap();
+
+            monkey.starting_items = Vec::new();
+
+            monkeys = clone_monkey;
+        }
+
+        println!("monkeys at index {index}: {:?}", monkeys);
+        println!("");
+        println!("");
+    }
+
+    println!("monkeys at the end: {:?}", monkeys);
+
+    holded_objects.sort();
+
+    println!(
+        "holded_objects at the end: {:?}",
+        holded_objects.iter().rev()
+    );
+
+    let maxi_0 = holded_objects.pop().unwrap();
+    let maxi_1 = holded_objects.pop().unwrap();
+
+    maxi_0 * maxi_1
 }
 
 /// Main function
@@ -300,6 +492,6 @@ mod tests {
     #[test]
     fn internal() {
         assert_eq!(aux_one(Path::new("input/test.txt")), 10605);
-        // assert_eq!(aux_two(Path::new("input/test.txt")), 36);
+        assert_eq!(aux_two(Path::new("input/test.txt")), 2713310158);
     }
 }
