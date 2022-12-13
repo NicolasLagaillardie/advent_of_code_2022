@@ -6,11 +6,11 @@ use std::path::Path;
 
 #[derive(Debug)]
 struct Monkey {
-    starting_items: Vec<i128>,
+    starting_items: Vec<u128>,
     operation: (String, String, String),
-    test: i128,
-    if_true: i128,
-    if_false: i128,
+    test: u128,
+    if_true: u128,
+    if_false: u128,
 }
 
 impl Monkey {
@@ -38,7 +38,7 @@ impl Clone for Monkey {
 }
 
 /// Function for part 01
-fn aux_one(file: &Path) -> i128 {
+fn aux_one(file: &Path) -> u128 {
     // Open file
     let file = File::open(file).unwrap();
 
@@ -48,7 +48,7 @@ fn aux_one(file: &Path) -> i128 {
     // Starting items = Vec<String>
     // Operation = String
     // (Test, True, False) = (String, String, String)
-    let mut monkeys = HashMap::<i128, Monkey>::new();
+    let mut monkeys = HashMap::<u128, Monkey>::new();
 
     // Stores current parsed monkey
     let mut current_monkey = 0;
@@ -64,11 +64,11 @@ fn aux_one(file: &Path) -> i128 {
             let line = line.iter().cloned().collect::<String>();
             let line = line.split(":").collect::<Vec<&str>>();
 
-            current_monkey = line[0].parse::<i128>().unwrap();
+            current_monkey = line[0].parse::<u128>().unwrap();
 
             let monkey = Monkey::new();
 
-            monkeys.insert(line[0].parse::<i128>().unwrap(), monkey);
+            monkeys.insert(line[0].parse::<u128>().unwrap(), monkey);
         } else if line.contains("Starting items: ") {
             let line = line.split("Starting items: ").collect::<Vec<&str>>();
             let line = line.iter().cloned().collect::<String>();
@@ -79,7 +79,7 @@ fn aux_one(file: &Path) -> i128 {
             let monkey = monkeys.get_mut(&current_monkey).unwrap();
 
             for elt in line {
-                monkey.starting_items.push(elt.parse::<i128>().unwrap());
+                monkey.starting_items.push(elt.parse::<u128>().unwrap());
             }
         } else if line.contains("Operation: new = ") {
             let line = line.split("Operation: new = ").collect::<Vec<&str>>();
@@ -100,7 +100,7 @@ fn aux_one(file: &Path) -> i128 {
 
             let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
 
-            monkey.test = line[1].parse::<i128>().unwrap();
+            monkey.test = line[1].parse::<u128>().unwrap();
         } else if line.contains("If true: throw to monkey ") {
             let line = line
                 .split("If true: throw to monkey ")
@@ -108,7 +108,7 @@ fn aux_one(file: &Path) -> i128 {
 
             let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
 
-            monkey.if_true = line[1].parse::<i128>().unwrap();
+            monkey.if_true = line[1].parse::<u128>().unwrap();
         } else if line.contains("If false: ") {
             let line = line
                 .split("If false: throw to monkey ")
@@ -116,7 +116,7 @@ fn aux_one(file: &Path) -> i128 {
 
             let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
 
-            monkey.if_false = line[1].parse::<i128>().unwrap();
+            monkey.if_false = line[1].parse::<u128>().unwrap();
         }
     }
 
@@ -130,7 +130,7 @@ fn aux_one(file: &Path) -> i128 {
         for monkey_index in 0..monkeys.len() {
             let mut clone_monkey = monkeys.clone();
 
-            let monkey = monkeys.get_mut(&(monkey_index as i128)).unwrap();
+            let monkey = monkeys.get_mut(&(monkey_index as u128)).unwrap();
 
             if monkey.operation.1.contains('+') {
                 if monkey.operation.0.contains("old") {
@@ -152,7 +152,7 @@ fn aux_one(file: &Path) -> i128 {
                             }
                         }
                     } else {
-                        let extract_right = monkey.operation.2.parse::<i128>().unwrap();
+                        let extract_right = monkey.operation.2.parse::<u128>().unwrap();
                         for elt in &monkey.starting_items {
                             let test = (elt + extract_right) / 3;
 
@@ -191,7 +191,7 @@ fn aux_one(file: &Path) -> i128 {
                             }
                         }
                     } else {
-                        let extract_right = monkey.operation.2.parse::<i128>().unwrap();
+                        let extract_right = monkey.operation.2.parse::<u128>().unwrap();
                         for elt in &monkey.starting_items {
                             let test = (elt * extract_right) / 3;
 
@@ -214,7 +214,7 @@ fn aux_one(file: &Path) -> i128 {
                 panic!("Error, expected + or *, found {}", monkey.operation.1);
             }
 
-            let monkey = clone_monkey.get_mut(&(monkey_index as i128)).unwrap();
+            let monkey = clone_monkey.get_mut(&(monkey_index as u128)).unwrap();
 
             monkey.starting_items = Vec::new();
 
@@ -242,7 +242,7 @@ fn aux_one(file: &Path) -> i128 {
 }
 
 /// Function for part 02
-fn aux_two(file: &Path) -> i128 {
+fn aux_two(file: &Path) -> u128 {
     // Open file
     let file = File::open(file).unwrap();
 
@@ -252,7 +252,7 @@ fn aux_two(file: &Path) -> i128 {
     // Starting items = Vec<String>
     // Operation = String
     // (Test, True, False) = (String, String, String)
-    let mut monkeys = HashMap::<i128, Monkey>::new();
+    let mut monkeys = HashMap::<u128, Monkey>::new();
 
     // Stores current parsed monkey
     let mut current_monkey = 0;
@@ -271,11 +271,11 @@ fn aux_two(file: &Path) -> i128 {
             let line = line.iter().cloned().collect::<String>();
             let line = line.split(":").collect::<Vec<&str>>();
 
-            current_monkey = line[0].parse::<i128>().unwrap();
+            current_monkey = line[0].parse::<u128>().unwrap();
 
             let monkey = Monkey::new();
 
-            monkeys.insert(line[0].parse::<i128>().unwrap(), monkey);
+            monkeys.insert(line[0].parse::<u128>().unwrap(), monkey);
         } else if line.contains("Starting items: ") {
             let line = line.split("Starting items: ").collect::<Vec<&str>>();
             let line = line.iter().cloned().collect::<String>();
@@ -286,7 +286,7 @@ fn aux_two(file: &Path) -> i128 {
             let monkey = monkeys.get_mut(&current_monkey).unwrap();
 
             for elt in line {
-                monkey.starting_items.push(elt.parse::<i128>().unwrap());
+                monkey.starting_items.push(elt.parse::<u128>().unwrap());
             }
         } else if line.contains("Operation: new = ") {
             let line = line.split("Operation: new = ").collect::<Vec<&str>>();
@@ -307,7 +307,7 @@ fn aux_two(file: &Path) -> i128 {
 
             let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
 
-            monkey.test = line[1].parse::<i128>().unwrap();
+            monkey.test = line[1].parse::<u128>().unwrap();
 
             lowest_common_denominator *= monkey.test;
         } else if line.contains("If true: throw to monkey ") {
@@ -317,7 +317,7 @@ fn aux_two(file: &Path) -> i128 {
 
             let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
 
-            monkey.if_true = line[1].parse::<i128>().unwrap();
+            monkey.if_true = line[1].parse::<u128>().unwrap();
         } else if line.contains("If false: ") {
             let line = line
                 .split("If false: throw to monkey ")
@@ -325,7 +325,7 @@ fn aux_two(file: &Path) -> i128 {
 
             let mut monkey = monkeys.get_mut(&current_monkey).unwrap();
 
-            monkey.if_false = line[1].parse::<i128>().unwrap();
+            monkey.if_false = line[1].parse::<u128>().unwrap();
         }
     }
 
@@ -341,7 +341,7 @@ fn aux_two(file: &Path) -> i128 {
         for monkey_index in 0..monkeys.len() {
             let mut clone_monkey = monkeys.clone();
 
-            let monkey = monkeys.get_mut(&(monkey_index as i128)).unwrap();
+            let monkey = monkeys.get_mut(&(monkey_index as u128)).unwrap();
 
             if monkey.operation.1.contains('+') {
                 if monkey.operation.0.contains("old") {
@@ -363,7 +363,7 @@ fn aux_two(file: &Path) -> i128 {
                             }
                         }
                     } else {
-                        let extract_right = monkey.operation.2.parse::<i128>().unwrap();
+                        let extract_right = monkey.operation.2.parse::<u128>().unwrap();
                         for elt in &monkey.starting_items {
                             let test = elt + extract_right;
 
@@ -402,7 +402,7 @@ fn aux_two(file: &Path) -> i128 {
                             }
                         }
                     } else {
-                        let extract_right = monkey.operation.2.parse::<i128>().unwrap();
+                        let extract_right = monkey.operation.2.parse::<u128>().unwrap();
                         for elt in &monkey.starting_items {
                             let test = elt * extract_right;
 
@@ -425,7 +425,7 @@ fn aux_two(file: &Path) -> i128 {
                 panic!("Error, expected + or *, found {}", monkey.operation.1);
             }
 
-            let monkey = clone_monkey.get_mut(&(monkey_index as i128)).unwrap();
+            let monkey = clone_monkey.get_mut(&(monkey_index as u128)).unwrap();
 
             monkey.starting_items = Vec::new();
 
