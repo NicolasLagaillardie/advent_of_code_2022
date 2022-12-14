@@ -141,6 +141,7 @@ fn aux_one(file: &Path) -> i32 {
 }
 
 /// Function for part 02
+/// TODO: some issue with an offset of -1/+1
 fn aux_two(file: &Path) -> i32 {
     // Open file
     let file = File::open(file).unwrap();
@@ -151,7 +152,7 @@ fn aux_two(file: &Path) -> i32 {
 
     let mut matrix_paths = Vec::new();
 
-    let mut starting_cells = Vec::new();
+    let mut starting_cell = (0, 0);
 
     let mut ending_cell = (0, 0);
 
@@ -164,9 +165,8 @@ fn aux_two(file: &Path) -> i32 {
         let mut weights = vec![-1; line.len()];
 
         if line.contains(&'S') {
-            let temp = line.iter().position(|&r| r == 'S').unwrap();
-            starting_cells.push((index_line, temp));
-            line[temp] = 'a';
+            starting_cell = (index_line, line.iter().position(|&r| r == 'S').unwrap());
+            line[starting_cell.1] = 'a';
         }
 
         if line.contains(&'E') {
@@ -178,7 +178,6 @@ fn aux_two(file: &Path) -> i32 {
         if line.contains(&'a') {
             for (index, elt) in line.clone().iter().enumerate() {
                 if elt == &'a' {
-                    starting_cells.push((index_line, index));
                     weights[index] = 0;
                 }
             }
@@ -189,8 +188,8 @@ fn aux_two(file: &Path) -> i32 {
         matrix_paths.push(weights);
     }
 
-    // -1 because we start after
-    djikstra_process(starting_cells[0], matrix_paths, matrix_heights, ending_cell) - 1
+    // -1 because some offset
+    djikstra_process(starting_cell, matrix_paths, matrix_heights, ending_cell) - 1
 }
 
 /// Main function
