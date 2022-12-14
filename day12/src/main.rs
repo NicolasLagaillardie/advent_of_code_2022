@@ -4,55 +4,13 @@ use std::fs::File;
 use std::io::{stdin, BufRead, BufReader};
 use std::path::Path;
 
-/// Function for part 01
-fn aux_one(file: &Path) -> i32 {
-    // Open file
-    let file = File::open(file).unwrap();
-
-    let reader = BufReader::new(file);
-
-    let mut matrix_heights = Vec::new();
-
-    let mut matrix_paths = Vec::new();
-
-    let mut current_cell = (0, 0);
-
-    let mut ending_cell = (0, 0);
-
-    // Read file line by line, for part 01
-    for (index_line, line) in reader.lines().enumerate() {
-        // Split line into direction and steps
-        let line = line.unwrap();
-        let mut line = line.chars().collect::<Vec<char>>();
-
-        let weights = vec![-1; line.len()];
-
-        if line.contains(&'S') {
-            current_cell.0 = index_line;
-            current_cell.1 = line.iter().position(|&r| r == 'S').unwrap();
-            line[current_cell.1] = 'a';
-        }
-
-        if line.contains(&'E') {
-            ending_cell.0 = index_line;
-            ending_cell.1 = line.iter().position(|&r| r == 'E').unwrap();
-            line[ending_cell.1] = 'z';
-        }
-
-        matrix_heights.push(line);
-
-        matrix_paths.push(weights);
-    }
-
-    println!("current_cell: {:?}", current_cell);
-
-    println!("ending_cell: {:?}", ending_cell);
-
-    let length = matrix_heights.len() - 1;
-    let height = matrix_heights[0].len() - 1;
-
-    println!("size: {:?}", length * height);
-
+/// Process the matrix provided from the given cell
+fn djikstra_process(
+    current_cell: (usize, usize),
+    mut matrix_paths: Vec<Vec<i32>>,
+    matrix_heights: Vec<Vec<char>>,
+    ending_cell: (usize, usize),
+) -> i32 {
     let mut explored_cells = vec![current_cell];
 
     matrix_paths[current_cell.0][current_cell.1] = 0;
@@ -61,7 +19,7 @@ fn aux_one(file: &Path) -> i32 {
         let mut temp = Vec::new();
         for cell in explored_cells.clone().iter() {
             // Check on their right
-            if cell.0 < length
+            if cell.0 < matrix_heights.len() - 1
                 && (matrix_heights[cell.0 + 1][cell.1] as u32)
                     <= ((matrix_heights[cell.0][cell.1] as u32) + 1)
             {
@@ -97,7 +55,7 @@ fn aux_one(file: &Path) -> i32 {
             }
 
             // Check above
-            if cell.1 < height
+            if cell.1 < matrix_heights[0].len() - 1
                 && (matrix_heights[cell.0][cell.1 + 1] as u32)
                     <= ((matrix_heights[cell.0][cell.1] as u32) + 1)
             {
@@ -139,6 +97,49 @@ fn aux_one(file: &Path) -> i32 {
     matrix_paths[ending_cell.0][ending_cell.1]
 }
 
+/// Function for part 01
+fn aux_one(file: &Path) -> i32 {
+    // Open file
+    let file = File::open(file).unwrap();
+
+    let reader = BufReader::new(file);
+
+    let mut matrix_heights = Vec::new();
+
+    let mut matrix_paths = Vec::new();
+
+    let mut current_cell = (0, 0);
+
+    let mut ending_cell = (0, 0);
+
+    // Read file line by line, for part 01
+    for (index_line, line) in reader.lines().enumerate() {
+        // Split line into direction and steps
+        let line = line.unwrap();
+        let mut line = line.chars().collect::<Vec<char>>();
+
+        let weights = vec![-1; line.len()];
+
+        if line.contains(&'S') {
+            current_cell.0 = index_line;
+            current_cell.1 = line.iter().position(|&r| r == 'S').unwrap();
+            line[current_cell.1] = 'a';
+        }
+
+        if line.contains(&'E') {
+            ending_cell.0 = index_line;
+            ending_cell.1 = line.iter().position(|&r| r == 'E').unwrap();
+            line[ending_cell.1] = 'z';
+        }
+
+        matrix_heights.push(line);
+
+        matrix_paths.push(weights);
+    }
+
+    djikstra_process(current_cell, matrix_paths, matrix_heights, ending_cell)
+}
+
 /// Function for part 02
 fn aux_two(file: &Path) -> i32 {
     // Open file
@@ -146,14 +147,50 @@ fn aux_two(file: &Path) -> i32 {
 
     let reader = BufReader::new(file);
 
+    let mut matrix_heights = Vec::new();
+
+    let mut matrix_paths = Vec::new();
+
+    let mut starting_cells = Vec::new();
+
+    let mut ending_cell = (0, 0);
+
     // Read file line by line, for part 01
-    for (_index_line, line) in reader.lines().enumerate() {
+    for (index_line, line) in reader.lines().enumerate() {
         // Split line into direction and steps
         let line = line.unwrap();
-        let line = line.split(' ').collect::<Vec<&str>>();
+        let mut line = line.chars().collect::<Vec<char>>();
+
+        let mut weights = vec![-1; line.len()];
+
+        if line.contains(&'S') {
+            let temp = line.iter().position(|&r| r == 'S').unwrap();
+            starting_cells.push((index_line, temp));
+            line[temp] = 'a';
+        }
+
+        if line.contains(&'E') {
+            ending_cell.0 = index_line;
+            ending_cell.1 = line.iter().position(|&r| r == 'E').unwrap();
+            line[ending_cell.1] = 'z';
+        }
+
+        if line.contains(&'a') {
+            for (index, elt) in line.clone().iter().enumerate() {
+                if elt == &'a' {
+                    starting_cells.push((index_line, index));
+                    weights[index] = 0;
+                }
+            }
+        }
+
+        matrix_heights.push(line);
+
+        matrix_paths.push(weights);
     }
 
-    0
+    // -1 because we start after
+    djikstra_process(starting_cells[0], matrix_paths, matrix_heights, ending_cell) - 1
 }
 
 /// Main function
@@ -196,7 +233,6 @@ mod tests {
     #[test]
     fn internal() {
         assert_eq!(aux_one(Path::new("input/test.txt")), 31);
-        // No actual possible test, need to read letters on CRT
-        // assert_eq!(aux_two(Path::new("input/test.txt")), 36);
+        assert_eq!(aux_two(Path::new("input/test.txt")), 29);
     }
 }
