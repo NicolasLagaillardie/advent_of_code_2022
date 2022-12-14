@@ -1,4 +1,5 @@
 use core::panic;
+use std::cmp::min;
 use std::fs::File;
 use std::io::{stdin, BufRead, BufReader};
 use std::path::Path;
@@ -10,70 +11,132 @@ fn aux_one(file: &Path) -> i32 {
 
     let reader = BufReader::new(file);
 
-    let mut x = 1;
+    let mut matrix_heights = Vec::new();
 
-    let mut result = 0;
+    let mut matrix_paths = Vec::new();
 
-    let mut current_cycle = 0;
+    let mut current_cell = (0, 0);
+
+    let mut ending_cell = (0, 0);
 
     // Read file line by line, for part 01
-    for (_index_line, line) in reader.lines().enumerate() {
+    for (index_line, line) in reader.lines().enumerate() {
         // Split line into direction and steps
         let line = line.unwrap();
-        let line = line.split(' ').collect::<Vec<&str>>();
+        let mut line = line.chars().collect::<Vec<char>>();
 
-        let instruction = line[0];
+        let weights = vec![-1; line.len()];
 
-        match instruction {
-            "noop" => {
-                current_cycle += 1;
-
-                if current_cycle == 20
-                    || current_cycle == 60
-                    || current_cycle == 100
-                    || current_cycle == 140
-                    || current_cycle == 180
-                    || current_cycle == 220
-                {
-                    result += current_cycle * x;
-                }
-            }
-
-            "addx" => {
-                let steps = line[1].parse::<i32>().unwrap();
-
-                current_cycle += 1;
-
-                if current_cycle == 20
-                    || current_cycle == 60
-                    || current_cycle == 100
-                    || current_cycle == 140
-                    || current_cycle == 180
-                    || current_cycle == 220
-                {
-                    result += current_cycle * x;
-                }
-
-                current_cycle += 1;
-
-                if current_cycle == 20
-                    || current_cycle == 60
-                    || current_cycle == 100
-                    || current_cycle == 140
-                    || current_cycle == 180
-                    || current_cycle == 220
-                {
-                    result += current_cycle * x;
-                }
-
-                x += steps;
-            }
-
-            elt => panic!("Error, expected noop or addx, found {elt}"),
+        if line.contains(&'S') {
+            current_cell.0 = index_line;
+            current_cell.1 = line.iter().position(|&r| r == 'S').unwrap();
+            line[current_cell.1] = 'a';
         }
+
+        if line.contains(&'E') {
+            ending_cell.0 = index_line;
+            ending_cell.1 = line.iter().position(|&r| r == 'E').unwrap();
+            line[ending_cell.1] = 'z';
+        }
+
+        matrix_heights.push(line);
+
+        matrix_paths.push(weights);
     }
 
-    result
+    println!("current_cell: {:?}", current_cell);
+
+    println!("ending_cell: {:?}", ending_cell);
+
+    let length = matrix_heights.len() - 1;
+    let height = matrix_heights[0].len() - 1;
+
+    println!("size: {:?}", length * height);
+
+    let mut explored_cells = vec![current_cell];
+
+    matrix_paths[current_cell.0][current_cell.1] = 0;
+
+    while matrix_paths[ending_cell.0][ending_cell.1] == -1 {
+        let mut temp = Vec::new();
+        for cell in explored_cells.clone().iter() {
+            // Check on their right
+            if cell.0 < length
+                && (matrix_heights[cell.0 + 1][cell.1] as u32)
+                    <= ((matrix_heights[cell.0][cell.1] as u32) + 1)
+            {
+                if matrix_paths[cell.0 + 1][cell.1] == -1 {
+                    matrix_paths[cell.0 + 1][cell.1] = matrix_paths[cell.0][cell.1] + 1;
+                } else {
+                    matrix_paths[cell.0 + 1][cell.1] = min(
+                        matrix_paths[cell.0 + 1][cell.1],
+                        matrix_paths[cell.0][cell.1] + 1,
+                    );
+                }
+                if !temp.contains(&(cell.0 + 1, cell.1)) {
+                    temp.push((cell.0 + 1, cell.1));
+                }
+            }
+
+            // Check on their left
+            if cell.0 > 0
+                && (matrix_heights[cell.0 - 1][cell.1] as u32)
+                    <= ((matrix_heights[cell.0][cell.1] as u32) + 1)
+            {
+                if matrix_paths[cell.0 - 1][cell.1] == -1 {
+                    matrix_paths[cell.0 - 1][cell.1] = matrix_paths[cell.0][cell.1] + 1;
+                } else {
+                    matrix_paths[cell.0 - 1][cell.1] = min(
+                        matrix_paths[cell.0 - 1][cell.1],
+                        matrix_paths[cell.0][cell.1] + 1,
+                    );
+                }
+                if !temp.contains(&(cell.0 - 1, cell.1)) {
+                    temp.push((cell.0 - 1, cell.1));
+                }
+            }
+
+            // Check above
+            if cell.1 < height
+                && (matrix_heights[cell.0][cell.1 + 1] as u32)
+                    <= ((matrix_heights[cell.0][cell.1] as u32) + 1)
+            {
+                if matrix_paths[cell.0][cell.1 + 1] == -1 {
+                    matrix_paths[cell.0][cell.1 + 1] = matrix_paths[cell.0][cell.1] + 1;
+                } else {
+                    matrix_paths[cell.0][cell.1 + 1] = min(
+                        matrix_paths[cell.0][cell.1 + 1],
+                        matrix_paths[cell.0][cell.1] + 1,
+                    );
+                }
+                if !temp.contains(&(cell.0, cell.1 + 1)) {
+                    temp.push((cell.0, cell.1 + 1));
+                }
+            }
+
+            // Check down
+            if cell.1 > 0
+                && (matrix_heights[cell.0][cell.1 - 1] as u32)
+                    <= ((matrix_heights[cell.0][cell.1] as u32) + 1)
+            {
+                if matrix_paths[cell.0][cell.1 - 1] == -1 {
+                    matrix_paths[cell.0][cell.1 - 1] = matrix_paths[cell.0][cell.1] + 1;
+                } else {
+                    matrix_paths[cell.0][cell.1 - 1] = min(
+                        matrix_paths[cell.0][cell.1 - 1],
+                        matrix_paths[cell.0][cell.1] + 1,
+                    );
+                }
+                if !temp.contains(&(cell.0, cell.1 - 1)) {
+                    temp.push((cell.0, cell.1 - 1));
+                }
+            }
+        }
+
+        explored_cells = temp;
+    }
+
+    matrix_paths[ending_cell.0][ending_cell.1]
 }
 
 /// Function for part 02
@@ -83,67 +146,12 @@ fn aux_two(file: &Path) -> i32 {
 
     let reader = BufReader::new(file);
 
-    let mut crt = vec![vec!['.'; 40]; 6];
-
-    let mut current_cycle = 0;
-
-    let mut sprite_position: i32 = 0;
-
     // Read file line by line, for part 01
     for (_index_line, line) in reader.lines().enumerate() {
         // Split line into direction and steps
         let line = line.unwrap();
         let line = line.split(' ').collect::<Vec<&str>>();
-
-        let instruction = line[0];
-
-        println!("sprite_position: {sprite_position}");
-
-        match instruction {
-            "noop" => {
-                if sprite_position <= (current_cycle % 40)
-                    && (current_cycle % 40) <= sprite_position + 2
-                {
-                    crt[(current_cycle / 40) as usize][(current_cycle % 40) as usize] = '#';
-                }
-
-                current_cycle += 1;
-            }
-
-            "addx" => {
-                let steps = line[1].parse::<i32>().unwrap();
-
-                if sprite_position <= (current_cycle % 40)
-                    && (current_cycle % 40) <= sprite_position + 2
-                {
-                    crt[(current_cycle / 40) as usize][(current_cycle % 40) as usize] = '#';
-                }
-
-                current_cycle += 1;
-
-                if sprite_position <= (current_cycle % 40)
-                    && (current_cycle % 40) <= sprite_position + 2
-                {
-                    crt[(current_cycle / 40) as usize][(current_cycle % 40) as usize] = '#';
-                }
-
-                current_cycle += 1;
-
-                sprite_position += steps;
-
-                println!("steps: {steps}");
-            }
-
-            elt => panic!("Error, expected noop or addx, found {elt}"),
-        }
     }
-
-    println!("Line 0: {:?}", crt[0].iter().collect::<String>());
-    println!("Line 1: {:?}", crt[1].iter().collect::<String>());
-    println!("Line 2: {:?}", crt[2].iter().collect::<String>());
-    println!("Line 3: {:?}", crt[3].iter().collect::<String>());
-    println!("Line 4: {:?}", crt[4].iter().collect::<String>());
-    println!("Line 5: {:?}", crt[5].iter().collect::<String>());
 
     0
 }
@@ -187,7 +195,7 @@ mod tests {
 
     #[test]
     fn internal() {
-        assert_eq!(aux_one(Path::new("input/test.txt")), 13140);
+        assert_eq!(aux_one(Path::new("input/test.txt")), 31);
         // No actual possible test, need to read letters on CRT
         // assert_eq!(aux_two(Path::new("input/test.txt")), 36);
     }
