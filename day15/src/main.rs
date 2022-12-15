@@ -78,14 +78,13 @@ fn aux_one(file: &Path, row: i128) -> i128 {
     let mut closed_positions = Vec::new();
 
     for index in min_column..=max_column {
-        if !beacons.contains(&(index, row)) {
-            'sensor_for: for (index_sensor, sensor) in sensors.iter().enumerate() {
-                if (i128::abs(sensor.0 - index) + i128::abs(sensor.1 - row))
-                    <= distances[index_sensor]
-                {
+        'sensor_for: for (index_sensor, sensor) in sensors.iter().enumerate() {
+            if (i128::abs(sensor.0 - index) + i128::abs(sensor.1 - row)) <= distances[index_sensor]
+            {
+                if !beacons.contains(&(index, row)) {
                     closed_positions.push((index, row));
-                    break 'sensor_for;
                 }
+                break 'sensor_for;
             }
         }
     }
