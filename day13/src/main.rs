@@ -3,156 +3,146 @@ use std::fs::File;
 use std::io::{stdin, BufRead, BufReader};
 use std::path::Path;
 
-/// Extract element from given list
-fn extract_first_value_list(mut list: Vec<String>) -> (Vec<String>, Vec<String>) {
-    if list.is_empty() {
-        return (vec![], vec![]);
-    }
+enum Result {
+    True,
+    False,
+    Unknown,
+}
 
-    let mut extracted_list = Vec::new();
+/// Split head and tail from list
+fn head_tail(mut list: Vec<String>) -> (Vec<String>, Vec<String>) {
+    let mut head = Vec::new();
+    let mut group_bracket = 0;
 
     for elt in list.clone().iter() {
         match &elt[..] {
             "[" => {
-                extracted_list.push(list.remove(0));
-            }
-            "]" => {
-                extracted_list.push(list.remove(0));
-            }
-            "," => {
-                if extracted_list.iter().filter(|&elt| elt == &"[").count()
-                    == extracted_list.iter().filter(|&elt| elt == &"]").count()
-                {
-                    list.remove(0);
-                    return (extracted_list, list);
+                if group_bracket > 0 {
+                    head.push(list.remove(0));
                 } else {
-                    extracted_list.push(list.remove(0));
-                }
-            }
-            _ => {
-                extracted_list.push(list.remove(0));
-            }
-        }
-    }
-
-    (extracted_list, list)
-}
-
-/// Remove first matching brackets
-fn remove_matching_brackets(mut list: Vec<String>) -> Vec<String> {
-    let mut starting_bracket = 0;
-    let mut ending_bracket = 0;
-    let mut group_bracket = 0;
-
-    for (index, elt) in list.clone().iter().enumerate() {
-        match &elt[..] {
-            "[" => {
-                if group_bracket == 0 {
-                    starting_bracket = index;
+                    list.remove(0);
                 }
 
                 group_bracket += 1;
             }
             "]" => {
+                if group_bracket == 1 {
+                    // If we didn't reach the end of the list
+                    if !list.is_empty() && list[0] == "," {
+                        list.remove(0);
+                    }
+                    // Close the tail
+                    list.insert(0, "[".to_string());
+
+                    return (head, list);
+                } else if group_bracket > 1 {
+                    head.push(list.remove(0));
+                }
                 group_bracket -= 1;
-                if group_bracket == 0 {
-                    ending_bracket = index;
+            }
+            "," => {
+                if head.iter().filter(|&elt| elt == &"[").count()
+                    == head.iter().filter(|&elt| elt == &"]").count()
+                {
+                    // If we didn't reach the end of the list
+                    if list[0] == "," {
+                        list.remove(0);
+                    }
+                    // Close the tail
+                    list.insert(0, "[".to_string());
+
+                    return (head, list);
+                } else {
+                    head.push(list.remove(0));
                 }
             }
-            _ => {}
+            _ => {
+                head.push(list.remove(0));
+            }
         }
     }
 
-    list.remove(ending_bracket);
-    list.remove(starting_bracket);
-
-    list
+    return (head, list);
 }
 
 /// Compare both left and right
 /// Returns index if they are in right order, 0 if not
-fn compare(left: Vec<String>, right: Vec<String>, order: bool) -> bool {
-    if left.is_empty() {
-        return true;
-    } else if !left.is_empty() && right.is_empty() {
-        return false;
+fn compare(tail_left: Vec<String>, tail_right: Vec<String>, index: usize) -> Result {
+    if tail_left.is_empty() {
+        if tail_right.is_empty() {
+            return Result::Unknown;
+        } else {
+            return Result::True;
+        }
+    } else if !tail_left.is_empty() && tail_right.is_empty() {
+        return Result::False;
+    } else if tail_left == tail_right {
+        return Result::Unknown;
     }
 
-    println!("left: {:?}", left);
-    println!("right: {:?}", right);
-    println!("");
+    let (mut head_left, tail_left) = head_tail(tail_left);
+    let (mut head_right, tail_right) = head_tail(tail_right);
 
-    let (mut current_value_left, left) = extract_first_value_list(left);
-    let (mut current_value_right, right) = extract_first_value_list(right);
-
-    println!("current_value_left: {:?}", current_value_left);
-    println!("left: {:?}", left);
-    println!("current_value_right: {:?}", current_value_right);
-    println!("right: {:?}", right);
-    println!("");
-    println!("");
-
-    if current_value_left.is_empty() {
-        return true && order && compare(left, right, order);
-    } else if !current_value_left.is_empty() && current_value_right.is_empty() {
-        return false && order && compare(left, right, order);
+    if head_left == head_right {
+        return compare(tail_left, tail_right, index);
     }
 
-    if current_value_left[0] != "[" {
-        if current_value_right[0] != "[" {
+    if head_left.len() == 1 {
+        if head_right.len() == 1 {
             // If only integer(s)
-
-            if current_value_left[0].parse::<i32>().unwrap()
-                < current_value_right[0].parse::<i32>().unwrap()
-            {
-                return true;
-            } else if current_value_left[0].parse::<i32>().unwrap()
-                > current_value_right[0].parse::<i32>().unwrap()
-            {
-                return false;
+            if head_left[0].parse::<i32>().unwrap() < head_right[0].parse::<i32>().unwrap() {
+                return Result::True;
+            } else if head_left[0].parse::<i32>().unwrap() > head_right[0].parse::<i32>().unwrap() {
+                return Result::False;
             } else {
-                // Remove first integer and possible following comma
-                current_value_left.remove(0);
-                if !current_value_left.is_empty() {
-                    current_value_left.remove(0);
-                }
-                current_value_right.remove(0);
-                if !current_value_right.is_empty() {
-                    current_value_right.remove(0);
-                }
-                return order
-                    && compare(current_value_left, current_value_right, order)
-                    && compare(left, right, order);
+                match compare(tail_left.clone(), tail_right.clone(), index) {
+                    Result::Unknown => panic!("Wrong output for compare"),
+                    Result::True => {
+                        return Result::True;
+                    }
+                    Result::False => return Result::False,
+                };
             }
         } else {
-            // If left integer(s) and right list(s)
-            current_value_right = remove_matching_brackets(current_value_right);
+            // If head_left integer and head_right list(s)
+            head_left.insert(0, "[".to_string());
+            head_left.push("]".to_string());
 
-            return order
-                && compare(current_value_left, current_value_right, order)
-                && compare(left, right, order);
+            match compare(head_left.clone(), head_right.clone(), index) {
+                Result::Unknown => return compare(tail_left, tail_right, index),
+                Result::True => {
+                    return Result::True;
+                }
+                Result::False => return Result::False,
+            };
         }
     } else {
-        if current_value_right[0] != "[" {
-            // If left list(s) and right integer(s)
-            current_value_left = remove_matching_brackets(current_value_left);
+        if head_right.len() == 1 {
+            // If head_left list(s) and head_right integer
+            head_right.insert(0, "[".to_string());
+            head_right.push("]".to_string());
 
-            return order
-                && compare(current_value_left, current_value_right, order)
-                && compare(left, right, order);
+            match compare(head_left.clone(), head_right.clone(), index) {
+                Result::Unknown => return compare(tail_left, tail_right, index),
+                Result::True => {
+                    return Result::True;
+                }
+                Result::False => return Result::False,
+            };
         } else {
-            // If both lists
-            current_value_left = remove_matching_brackets(current_value_left);
-            current_value_right = remove_matching_brackets(current_value_right);
-
-            return order
-                && compare(current_value_left, current_value_right, order)
-                && compare(left, right, order);
+            match compare(head_left.clone(), head_right.clone(), index) {
+                Result::Unknown => return compare(tail_left, tail_right, index),
+                Result::True => {
+                    return Result::True;
+                }
+                Result::False => return Result::False,
+            };
         }
     }
 }
 
 /// Extract elements from line
+/// Done because integers > 9
 fn extract_left_right(line: String) -> Vec<String> {
     let mut result = Vec::new();
 
@@ -215,29 +205,24 @@ fn aux_one(file: &Path) -> i32 {
         }
     }
 
-    println!("matrix: {:?}", matrix);
-    println!("matrix len: {:?}", matrix.len());
-
     matrix
         .iter()
         .enumerate()
         .map(|(index_pair, list)| {
             // Remove first and last [ ] for left
-            let mut current_elt_left = list.0.clone();
-            current_elt_left.remove(0);
-            current_elt_left.remove(current_elt_left.len() - 1);
+            let current_elt_left = list.0.clone();
 
             // Remove first and last [ ] for right
-            let mut current_elt_right = list.1.clone();
-            current_elt_right.remove(0);
-            current_elt_right.remove(current_elt_right.len() - 1);
+            let current_elt_right = list.1.clone();
 
-            // Return result
-            if compare(current_elt_left, current_elt_right, true) {
-                println!("Is in order: {}", index_pair + 1);
-                index_pair as i32 + 1
-            } else {
-                0
+            match compare(
+                current_elt_left.clone(),
+                current_elt_right.clone(),
+                index_pair,
+            ) {
+                Result::Unknown => panic!("Wrong output"),
+                Result::True => index_pair as i32 + 1,
+                Result::False => 0,
             }
         })
         .collect::<Vec<i32>>()
