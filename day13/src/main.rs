@@ -67,7 +67,7 @@ fn head_tail(mut list: Vec<String>) -> (Vec<String>, Vec<String>) {
 
 /// Compare both left and right
 /// Returns index if they are in right order, 0 if not
-fn compare(tail_left: Vec<String>, tail_right: Vec<String>, index: usize) -> Result {
+fn compare(tail_left: Vec<String>, tail_right: Vec<String>) -> Result {
     if tail_left.is_empty() {
         if tail_right.is_empty() {
             return Result::Unknown;
@@ -84,7 +84,7 @@ fn compare(tail_left: Vec<String>, tail_right: Vec<String>, index: usize) -> Res
     let (mut head_right, tail_right) = head_tail(tail_right);
 
     if head_left == head_right {
-        return compare(tail_left, tail_right, index);
+        return compare(tail_left, tail_right);
     }
 
     if head_left.len() == 1 {
@@ -95,7 +95,7 @@ fn compare(tail_left: Vec<String>, tail_right: Vec<String>, index: usize) -> Res
             } else if head_left[0].parse::<i32>().unwrap() > head_right[0].parse::<i32>().unwrap() {
                 return Result::False;
             } else {
-                match compare(tail_left.clone(), tail_right.clone(), index) {
+                match compare(tail_left, tail_right) {
                     Result::Unknown => panic!("Wrong output for compare"),
                     Result::True => {
                         return Result::True;
@@ -108,8 +108,8 @@ fn compare(tail_left: Vec<String>, tail_right: Vec<String>, index: usize) -> Res
             head_left.insert(0, "[".to_string());
             head_left.push("]".to_string());
 
-            match compare(head_left.clone(), head_right.clone(), index) {
-                Result::Unknown => return compare(tail_left, tail_right, index),
+            match compare(head_left, head_right) {
+                Result::Unknown => return compare(tail_left, tail_right),
                 Result::True => {
                     return Result::True;
                 }
@@ -122,16 +122,16 @@ fn compare(tail_left: Vec<String>, tail_right: Vec<String>, index: usize) -> Res
             head_right.insert(0, "[".to_string());
             head_right.push("]".to_string());
 
-            match compare(head_left.clone(), head_right.clone(), index) {
-                Result::Unknown => return compare(tail_left, tail_right, index),
+            match compare(head_left, head_right) {
+                Result::Unknown => return compare(tail_left, tail_right),
                 Result::True => {
                     return Result::True;
                 }
                 Result::False => return Result::False,
             };
         } else {
-            match compare(head_left.clone(), head_right.clone(), index) {
-                Result::Unknown => return compare(tail_left, tail_right, index),
+            match compare(head_left, head_right) {
+                Result::Unknown => return compare(tail_left, tail_right),
                 Result::True => {
                     return Result::True;
                 }
@@ -143,7 +143,7 @@ fn compare(tail_left: Vec<String>, tail_right: Vec<String>, index: usize) -> Res
 
 /// Extract elements from line
 /// Done because integers > 9
-fn extract_left_right(line: String) -> Vec<String> {
+fn extract_vec_from_str(line: String) -> Vec<String> {
     let mut result = Vec::new();
 
     let mut temp_elt = "".to_string();
@@ -197,9 +197,9 @@ fn aux_one(file: &Path) -> i32 {
         let line = line.unwrap();
 
         if index_line % 3 == 0 {
-            left = extract_left_right(line);
+            left = extract_vec_from_str(line);
         } else if index_line % 3 == 1 {
-            let right = extract_left_right(line);
+            let right = extract_vec_from_str(line);
 
             matrix.push((left.clone(), right.clone()));
         }
@@ -208,33 +208,88 @@ fn aux_one(file: &Path) -> i32 {
     matrix
         .iter()
         .enumerate()
-        .map(|(index_pair, list)| {
-            // Remove first and last [ ] for left
-            let current_elt_left = list.0.clone();
-
-            // Remove first and last [ ] for right
-            let current_elt_right = list.1.clone();
-
-            match compare(
-                current_elt_left.clone(),
-                current_elt_right.clone(),
-                index_pair,
-            ) {
+        .map(
+            |(index_pair, list)| match compare(list.0.clone(), list.1.clone()) {
                 Result::Unknown => panic!("Wrong output"),
                 Result::True => index_pair as i32 + 1,
                 Result::False => 0,
-            }
-        })
+            },
+        )
         .collect::<Vec<i32>>()
         .iter()
         .sum()
 }
 
+fn sort_signals(mut matrix: Vec<Vec<String>>) -> Vec<Vec<String>> {
+    let mut clone = matrix.clone();
+    let mut in_order = false;
+    while !in_order {
+        clone = matrix.clone();
+        in_order = true;
+
+        for (index, _list) in matrix.iter().enumerate() {
+            if index < matrix.len() - 1 {
+                match compare(matrix[index].clone(), matrix[index + 1].clone()) {
+                    Result::Unknown => panic!("Wrong output"),
+                    Result::True => {}
+                    Result::False => {
+                        (clone[index], clone[index + 1]) =
+                            (clone[index + 1].clone(), clone[index].clone());
+                        in_order = false;
+                    }
+                }
+            }
+        }
+        matrix = clone.clone();
+    }
+
+    return clone;
+}
+
 /// Function for part 02
 fn aux_two(file: &Path) -> i32 {
-    println!("file: {:?}", file);
+    // Open file
+    let file = File::open(file).unwrap();
 
-    0
+    let reader = BufReader::new(file);
+
+    let mut matrix = Vec::new();
+
+    // Read file line by line, for part 01
+    for line in reader.lines() {
+        // Split line into direction and steps
+        let line = line.unwrap();
+
+        let line = extract_vec_from_str(line);
+        if !line.is_empty() {
+            matrix.push(line);
+        }
+    }
+
+    let first_divider = extract_vec_from_str("[[2]]".to_string());
+    let second_divider = extract_vec_from_str("[[6]]".to_string());
+    matrix.push(first_divider.clone());
+    matrix.push(second_divider.clone());
+
+    matrix = sort_signals(matrix);
+
+    let mut index_first_divider = 0;
+    let mut index_second_divider = 0;
+
+    for (index, elt) in matrix.iter().enumerate() {
+        if elt.iter().cloned().collect::<String>()
+            == first_divider.iter().cloned().collect::<String>()
+        {
+            index_first_divider = index;
+        }
+        if elt.iter().cloned().collect::<String>()
+            == second_divider.iter().cloned().collect::<String>()
+        {
+            index_second_divider = index;
+        }
+    }
+
+    (index_first_divider as i32 + 1) * (index_second_divider as i32 + 1)
 }
 
 /// Main function
@@ -277,6 +332,6 @@ mod tests {
     #[test]
     fn internal() {
         assert_eq!(aux_one(Path::new("input/test.txt")), 13);
-        // assert_eq!(aux_two(Path::new("input/test.txt")), 29);
+        assert_eq!(aux_two(Path::new("input/test.txt")), 140);
     }
 }
