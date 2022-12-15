@@ -72,14 +72,8 @@ fn aux_one(file: &Path, row: i128) -> i128 {
         }
     }
 
-    println!("sensors: {:?}", sensors);
-    println!("beacons: {:?}", beacons);
-
     let min_column = min_column.unwrap();
     let max_column = max_column.unwrap();
-
-    println!("min_column: {:?}", min_column);
-    println!("max_column: {:?}", max_column);
 
     let mut closed_positions = Vec::new();
 
@@ -95,8 +89,6 @@ fn aux_one(file: &Path, row: i128) -> i128 {
             }
         }
     }
-
-    println!("closed_positions: {:?}", closed_positions);
 
     closed_positions.len() as i128
 }
@@ -230,22 +222,7 @@ fn aux_two(file: &Path, is_test: bool) -> i128 {
         }
     }
 
-    println!("sensors: {:?}", sensors);
-    println!("beacons: {:?}", beacons);
-
-    let min_column = min_column.unwrap();
-    let max_column = max_column.unwrap();
-
-    println!("min_column: {:?}", min_column);
-    println!("max_column: {:?}", max_column);
-
-    let min_row = min_row.unwrap();
-    let max_row = max_row.unwrap();
-
-    println!("min_row: {:?}", min_row);
-    println!("max_row: {:?}", max_row);
-
-    for (index, cell) in cells_to_test.iter().enumerate() {
+    for cell in cells_to_test.iter() {
         if !beacons.contains(&cell) {
             let mut is_available = true;
 
@@ -257,8 +234,6 @@ fn aux_two(file: &Path, is_test: bool) -> i128 {
                     break 'sensor_for;
                 }
             }
-
-            println!("Progress: {:?}", index as f64 / cells_to_test.len() as f64);
 
             if is_available {
                 return cell.0 * 4000000 + cell.1;

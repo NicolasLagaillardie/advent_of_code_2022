@@ -214,8 +214,6 @@ fn aux_two(file: &Path) -> usize {
             }
         }
 
-        println!("current rocks: {:?}", coordinates_rocks.len());
-
         if current_rock == (500, 0) {
             coordinates_lines_sand.push(current_rock.clone());
             coordinates_rocks.push(current_rock.clone());
