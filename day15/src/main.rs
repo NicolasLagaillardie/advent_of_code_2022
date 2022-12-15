@@ -102,12 +102,7 @@ fn aux_two(file: &Path, is_test: bool) -> i128 {
 
     let mut sensors = Vec::new();
 
-    let mut beacons = Vec::new();
-
     let mut distances = Vec::new();
-
-    let mut min_column = None;
-    let mut max_column = None;
 
     let mut min_row = None;
     let mut max_row = None;
@@ -141,31 +136,12 @@ fn aux_two(file: &Path, is_test: bool) -> i128 {
         let y_beacon = coordinates_beacon[1].split("=").collect::<Vec<&str>>()[1];
         let y_beacon = y_beacon.parse::<i128>().unwrap();
 
-        // Add coordinates to sensors and beacons
+        // Add coordinates to sensors
         sensors.push((x_sensor, y_sensor));
-        beacons.push((x_beacon, y_beacon));
 
         // Include distance between sensor and beacon
         let distance = i128::abs(x_sensor - x_beacon) + i128::abs(y_sensor - y_beacon);
         distances.push(distance);
-
-        // Get lower bound of X coverage
-        if let Some(mini) = min_column {
-            if mini > min(x_sensor - distance, x_beacon) {
-                min_column = Some(min(x_sensor - distance, x_beacon));
-            }
-        } else {
-            min_column = Some(min(x_sensor - distance, x_beacon));
-        }
-
-        // Get upper bound of X coverage
-        if let Some(maxi) = max_column {
-            if maxi < max(x_sensor + distance, x_beacon) {
-                max_column = Some(max(x_sensor + distance, x_beacon));
-            }
-        } else {
-            max_column = Some(max(x_sensor + distance, x_beacon));
-        }
 
         // Get lower bound of Y coverage
         if let Some(mini) = min_row {
@@ -185,6 +161,7 @@ fn aux_two(file: &Path, is_test: bool) -> i128 {
             max_row = Some(max(y_sensor + distance, y_beacon));
         }
 
+        // Get cells right outside each sensor coverage area
         for x in 0..((distance + 1) * 4) {
             if x < (distance + 1) {
                 let cell_x = x_sensor + (x % (distance + 1));
@@ -222,22 +199,21 @@ fn aux_two(file: &Path, is_test: bool) -> i128 {
         }
     }
 
+    // Test each cell outside of each sensor coverage area
     for cell in cells_to_test.iter() {
-        if !beacons.contains(&cell) {
-            let mut is_available = true;
+        let mut is_available = true;
 
-            'sensor_for: for (index_sensor, sensor) in sensors.iter().enumerate() {
-                if (i128::abs(sensor.0 - cell.0) + i128::abs(sensor.1 - cell.1))
-                    <= distances[index_sensor]
-                {
-                    is_available = false;
-                    break 'sensor_for;
-                }
+        'sensor_for: for (index_sensor, sensor) in sensors.iter().enumerate() {
+            if (i128::abs(sensor.0 - cell.0) + i128::abs(sensor.1 - cell.1))
+                <= distances[index_sensor]
+            {
+                is_available = false;
+                break 'sensor_for;
             }
+        }
 
-            if is_available {
-                return cell.0 * 4000000 + cell.1;
-            }
+        if is_available {
+            return cell.0 * 4000000 + cell.1;
         }
     }
 
