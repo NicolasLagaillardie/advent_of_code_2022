@@ -1,4 +1,5 @@
 use core::panic;
+use std::cmp::max;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{stdin, BufRead, BufReader};
@@ -33,16 +34,19 @@ impl Clone for Valve {
 
 /// Explore valves
 fn explore_valves(
-    current_valve: Valve,
-    valves: HashMap<String, Valve>,
+    current_valve: &Valve,
+    valves: &HashMap<String, Valve>,
+    valves_with_pressure: &HashMap<String, Valve>,
     elapsed_time: i32,
-    explored_paths: Vec<(Vec<String>, i32)>,
-    opened_valves: Vec<String>,
+    explored_paths: &Vec<(Vec<String>, i32)>,
+    opened_valves: &Vec<String>,
+    explored_valves: &Vec<String>,
+    max_pressure: i32,
 ) -> Vec<(Vec<String>, i32)> {
     print!("{elapsed_time} / ");
 
-    if elapsed_time >= 30 || opened_valves.len() == valves.len() {
-        return explored_paths;
+    if elapsed_time >= 10 || opened_valves.len() == valves_with_pressure.len() {
+        return explored_paths.to_vec();
     }
 
     let mut temp_explored_paths = Vec::new();
@@ -55,63 +59,93 @@ fn explore_valves(
         for next_valve_string in current_valve.clone().connected_valves.iter() {
             if opened_valves.contains(next_valve_string) {
                 // Move to an opened valve
-                if elapsed_time + 1 <= 30 {
+                if elapsed_time + 1 <= 10 {
                     let mut temp_path = path.clone();
                     temp_path.push(next_valve_string.to_string());
 
                     let next_valve = valves.get(next_valve_string).unwrap();
 
+                    let mut temp_explored_valves = explored_valves.clone();
+                    if !temp_explored_valves.contains(next_valve_string) {
+                        temp_explored_valves.push(next_valve_string.to_string());
+                    }
+
                     temp_explored_paths.append(&mut explore_valves(
-                        next_valve.clone(),
-                        valves.clone(),
+                        next_valve,
+                        valves,
+                        valves_with_pressure,
                         elapsed_time + 1,
-                        vec![(temp_path.clone(), *pressure)],
-                        opened_valves.clone(),
+                        &vec![(temp_path.clone(), *pressure)],
+                        opened_valves,
+                        &temp_explored_valves,
+                        max(max_pressure, *pressure),
                     ));
                 }
             } else {
                 // Move to a closed valve but don't open it
-                if elapsed_time + 1 <= 30 {
+                if elapsed_time + 1 <= 10 {
                     let mut temp_path = path.clone();
                     temp_path.push(next_valve_string.to_string());
 
                     let next_valve = valves.get(next_valve_string).unwrap();
 
+                    let mut temp_explored_valves = explored_valves.clone();
+                    if !temp_explored_valves.contains(next_valve_string) {
+                        temp_explored_valves.push(next_valve_string.to_string());
+                    }
+
                     temp_explored_paths.append(&mut explore_valves(
-                        next_valve.clone(),
-                        valves.clone(),
+                        next_valve,
+                        valves,
+                        valves_with_pressure,
                         elapsed_time + 1,
-                        vec![(temp_path.clone(), *pressure)],
-                        opened_valves.clone(),
+                        &vec![(temp_path.clone(), *pressure)],
+                        opened_valves,
+                        &temp_explored_valves,
+                        max_pressure,
                     ));
                 }
 
                 // Move to a closed valve and open it
-                if elapsed_time + 2 <= 30 {
+                if elapsed_time + 2 <= 10 {
                     let mut temp_path = path.clone();
                     temp_path.push(next_valve_string.to_string());
 
                     let next_valve = valves.get(next_valve_string).unwrap();
 
-                    let mut temp_opened_valves = opened_valves.clone();
-                    temp_opened_valves.push(next_valve_string.clone());
+                    // If valve has impact on total pressure
+                    if next_valve.flow_rate != 0 {
+                        let mut temp_opened_valves = opened_valves.clone();
+                        temp_opened_valves.push(next_valve_string.clone());
 
-                    temp_explored_paths.append(&mut explore_valves(
-                        next_valve.clone(),
-                        valves.clone(),
-                        elapsed_time + 2,
-                        vec![(
-                            temp_path.clone(),
-                            *pressure + (31 - elapsed_time) * current_valve.flow_rate,
-                        )],
-                        temp_opened_valves,
-                    ));
+                        let mut temp_explored_valves = explored_valves.clone();
+                        if !temp_explored_valves.contains(next_valve_string) {
+                            temp_explored_valves.push(next_valve_string.to_string());
+                        }
+
+                        temp_explored_paths.append(&mut explore_valves(
+                            next_valve,
+                            valves,
+                            valves_with_pressure,
+                            elapsed_time + 2,
+                            &vec![(
+                                temp_path.clone(),
+                                *pressure + (10 - elapsed_time) * current_valve.flow_rate,
+                            )],
+                            &temp_opened_valves,
+                            &temp_explored_valves,
+                            max(
+                                max_pressure,
+                                *pressure + (10 - elapsed_time) * current_valve.flow_rate,
+                            ),
+                        ));
+                    }
                 }
             }
         }
     }
 
-    return temp_explored_paths;
+    temp_explored_paths
 }
 
 /// Function for part 01
@@ -122,6 +156,7 @@ fn aux_one(file: &Path) -> i32 {
     let reader = BufReader::new(file);
 
     let mut valves = HashMap::<String, Valve>::new();
+    let mut valves_with_pressure = HashMap::<String, Valve>::new();
 
     // Read file line by line, for part 01
     // Get composition of each monkey
@@ -160,6 +195,10 @@ fn aux_one(file: &Path) -> i32 {
         valve.flow_rate = flow_rate;
         valve.connected_valves = connected_valves;
 
+        if valve.flow_rate != 0 {
+            valves_with_pressure.insert(name.clone(), valve.clone());
+        }
+
         valves.insert(name, valve);
     }
 
@@ -168,22 +207,27 @@ fn aux_one(file: &Path) -> i32 {
     let starting_valve = valves.get("AA").unwrap();
 
     let result_vec = explore_valves(
-        starting_valve.clone(),
-        valves.clone(),
+        starting_valve,
+        &valves,
+        &valves_with_pressure,
         0,
-        vec![(vec![starting_valve.name.clone()], 0)],
-        Vec::new(),
+        &vec![(vec![starting_valve.name.clone()], 0)],
+        &Vec::new(),
+        &Vec::new(),
+        0,
     );
 
-    // println!("Result: {:?}", result);
-
     let mut result = 0;
+    let mut test = Vec::new();
 
     for elt in result_vec.iter() {
         if elt.1 > result {
+            test = elt.0.clone();
             result = elt.1;
         }
     }
+
+    println!("test: {:?}", test);
 
     result
 }
