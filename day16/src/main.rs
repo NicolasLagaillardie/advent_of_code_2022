@@ -101,14 +101,14 @@ fn build_paths(
     result
 }
 
-fn build_best_path(
+fn build_best_path_part_one(
     current_valve_name: String,
     valves: &HashMap<String, Valve>,
     paths: &HashMap<String, (Vec<String>, HashMap<String, Vec<String>>)>,
     mut max_pressure: i32,
     elapsed_time: i32,
     current_path: Vec<String>,
-) -> (Vec<String>, i32) {
+) -> i32 {
     // Get all closed valves
     let mut available_valves = Vec::new();
 
@@ -118,8 +118,6 @@ fn build_best_path(
             available_valves.push(name_valve.to_string());
         }
     }
-
-    let mut result = current_path.clone();
 
     let save_max_pressure = max_pressure.clone();
 
@@ -140,7 +138,7 @@ fn build_best_path(
 
             let valve = valves.get(name_valve).unwrap();
 
-            let temp = build_best_path(
+            let temp = build_best_path_part_one(
                 name_valve.to_string(),
                 valves,
                 paths,
@@ -151,14 +149,13 @@ fn build_best_path(
                 temp_result,
             );
 
-            if temp.1 > max_pressure {
-                max_pressure = temp.1;
-                result = temp.0.clone();
+            if temp > max_pressure {
+                max_pressure = temp;
             }
         }
     }
 
-    (result, max_pressure)
+    max_pressure
 }
 
 /// Function for part 01
@@ -197,7 +194,7 @@ fn aux_one(file: &Path) -> i32 {
 
         let flow_rate = line[0].parse::<i32>().unwrap();
 
-        let connected_valves = line[1].split(",").collect::<Vec<&str>>();
+        let connected_valves = line[1].split(',').collect::<Vec<&str>>();
         let connected_valves = connected_valves
             .iter()
             .map(|elt| elt.to_string().trim().to_string())
@@ -221,25 +218,169 @@ fn aux_one(file: &Path) -> i32 {
 
     println!("built_paths done");
 
-    let result_vec = build_best_path(
+    build_best_path_part_one(
         starting_valve.clone(),
         &valves,
         &built_paths,
         0,
         30,
         vec![starting_valve.clone()],
-    );
+    )
+}
 
-    println!("build_best_path done");
+fn build_best_path_part_two(
+    current_valve_name: String,
+    valves: &HashMap<String, Valve>,
+    paths: &HashMap<String, (Vec<String>, HashMap<String, Vec<String>>)>,
+    mut max_pressure: i32,
+    elapsed_time_me: i32,
+    elapsed_time_elephant: i32,
+    current_path: Vec<String>,
+) -> i32 {
+    // Get all closed valves
+    let mut available_valves = Vec::new();
 
-    println!("result_vec: {:?}", result_vec);
+    // Save max pressure
+    let save_max_pressure = max_pressure.clone();
 
-    result_vec.1
+    // Removed already explored valves
+    for (name_valve, valve) in valves.iter() {
+        if !current_path.contains(name_valve) && valve.flow_rate != 0 {
+            available_valves.push(name_valve.to_string());
+        }
+    }
+
+    // Move one then the other
+    for name_valve in available_valves.iter() {
+        // Get the path from the current valve to the connected name_valve for me
+        let path_starting_valve_to_valve = paths
+            .get(&current_valve_name)
+            .unwrap()
+            .1
+            .get(name_valve)
+            .unwrap();
+
+        // If within bounds of time limits for me
+        if elapsed_time_me - path_starting_valve_to_valve.len() as i32 > 0 {
+            let mut temp_result = current_path.clone();
+            temp_result.push(name_valve.to_string());
+
+            let valve_one = valves.get(name_valve).unwrap();
+
+            let temp = build_best_path_part_two(
+                name_valve.to_string(),
+                valves,
+                paths,
+                save_max_pressure
+                    + ((elapsed_time_me - path_starting_valve_to_valve.len() as i32)
+                        * valve_one.flow_rate),
+                elapsed_time_me - path_starting_valve_to_valve.len() as i32,
+                elapsed_time_elephant,
+                temp_result,
+            );
+
+            if temp > max_pressure {
+                max_pressure = temp;
+            }
+        }
+
+        // If within bounds of time limits for me
+        if elapsed_time_elephant - path_starting_valve_to_valve.len() as i32 > 0 {
+            let mut temp_result = current_path.clone();
+            temp_result.push(name_valve.to_string());
+
+            let valve_one = valves.get(name_valve).unwrap();
+
+            let temp = build_best_path_part_two(
+                name_valve.to_string(),
+                valves,
+                paths,
+                save_max_pressure
+                    + ((elapsed_time_elephant - path_starting_valve_to_valve.len() as i32)
+                        * valve_one.flow_rate),
+                elapsed_time_me,
+                elapsed_time_elephant - path_starting_valve_to_valve.len() as i32,
+                temp_result,
+            );
+
+            if temp > max_pressure {
+                max_pressure = temp;
+            }
+        }
+    }
+
+    max_pressure
 }
 
 /// Function for part 02
-fn aux_two(_file: &Path) -> i32 {
-    0
+fn aux_two(file: &Path) -> i32 {
+    // Open file
+    let file = File::open(file).unwrap();
+
+    let reader = BufReader::new(file);
+
+    let mut valves = HashMap::<String, Valve>::new();
+    let mut valves_with_pressure = HashMap::<String, Valve>::new();
+
+    // Read file line by line, for part 01
+    // Get composition of each monkey
+    for line in reader.lines() {
+        // Split line into direction and steps
+        let line = line.unwrap();
+        let line = line.trim();
+
+        let line = line.split("Valve ").collect::<Vec<&str>>()[1];
+
+        let line = line.split(" has flow rate=").collect::<Vec<&str>>();
+        let name = line[0].to_string();
+
+        let line = if line[1].contains("; tunnel leads to valve ") {
+            line[1]
+                .split("; tunnel leads to valve ")
+                .collect::<Vec<&str>>()
+        } else if line[1].contains("; tunnels lead to valves ") {
+            line[1]
+                .split("; tunnels lead to valves ")
+                .collect::<Vec<&str>>()
+        } else {
+            panic!("Error with line: {:?}", line);
+        };
+
+        let flow_rate = line[0].parse::<i32>().unwrap();
+
+        let connected_valves = line[1].split(',').collect::<Vec<&str>>();
+        let connected_valves = connected_valves
+            .iter()
+            .map(|elt| elt.to_string().trim().to_string())
+            .collect::<Vec<String>>();
+
+        let mut valve = Valve::new();
+        valve.name = name.clone();
+        valve.flow_rate = flow_rate;
+        valve.connected_valves = connected_valves;
+
+        if valve.flow_rate != 0 {
+            valves_with_pressure.insert(name.clone(), valve.clone());
+        }
+
+        valves.insert(name, valve);
+    }
+
+    let starting_valve = "AA".to_string();
+
+    let built_paths = build_paths(&valves);
+
+    println!("built_paths done");
+
+    build_best_path_part_two(
+        starting_valve.clone(),
+        &valves,
+        &built_paths,
+        0,
+        26,
+        26,
+        vec![starting_valve.clone()],
+    )
 }
 
 /// Main function
@@ -282,6 +423,6 @@ mod tests {
     #[test]
     fn internal() {
         assert_eq!(aux_one(Path::new("input/test.txt")), 1651);
-        // assert_eq!(aux_two(Path::new("input/test.txt"), true), 56000011);
+        assert_eq!(aux_two(Path::new("input/test.txt")), 1707);
     }
 }

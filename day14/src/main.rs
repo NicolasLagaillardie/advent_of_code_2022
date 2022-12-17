@@ -34,7 +34,7 @@ fn aux_one(file: &Path) -> usize {
             for elt in line.iter() {
                 // There are only two integers
                 let temp_elt = elt
-                    .split(",")
+                    .split(',')
                     .map(|elt| elt.parse::<i32>().unwrap())
                     .collect::<Vec<i32>>();
 
@@ -144,7 +144,7 @@ fn aux_two(file: &Path) -> usize {
             for elt in line.iter() {
                 // There are only two integers
                 let temp_elt = elt
-                    .split(",")
+                    .split(',')
                     .map(|elt| elt.parse::<i32>().unwrap())
                     .collect::<Vec<i32>>();
 

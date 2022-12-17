@@ -28,7 +28,7 @@ fn aux_one(file: &Path) -> u32 {
         // Sum scores
         match line.unwrap().trim().parse::<String>() {
             Ok(elt) => {
-                let elves = elt.split(",").collect::<Vec<&str>>();
+                let elves = elt.split(',').collect::<Vec<&str>>();
                 let elf_one = bounds(elves[0]);
                 let elf_two = bounds(elves[1]);
 
@@ -60,7 +60,7 @@ fn aux_two(file: &Path) -> u32 {
         // Sum scores
         match line.unwrap().trim().parse::<String>() {
             Ok(elt) => {
-                let elves = elt.split(",").collect::<Vec<&str>>();
+                let elves = elt.split(',').collect::<Vec<&str>>();
                 let elf_one = bounds(elves[0]);
                 let elf_two = bounds(elves[1]);
 
