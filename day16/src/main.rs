@@ -254,26 +254,25 @@ fn build_best_path_part_two(
 
     // Move one then the other
     for name_valve in available_valves.iter() {
-        // Get the path from the current valve to the connected name_valve for me
-        let path_starting_valve_to_valve_me = paths
-            .get(&current_valve_name_me)
-            .unwrap()
-            .1
-            .get(name_valve)
-            .unwrap();
+        // If I can move
+        if remaining_time_blocked_me == 0 {
+            // Get the path from the current valve to the connected name_valve for me
+            let path_starting_valve_to_valve_me = paths
+                .get(&current_valve_name_me)
+                .unwrap()
+                .1
+                .get(name_valve)
+                .unwrap();
 
-        // If within bounds of time limits for me
-        if elapsed_time - path_starting_valve_to_valve_me.len() as i32 > 0 {
-            let compute_time_elephant =
-                remaining_time_blocked_elephant - path_starting_valve_to_valve_me.len() as i32;
+            // If within bounds of time limits for me
+            if elapsed_time - path_starting_valve_to_valve_me.len() as i32 > 0 {
+                let compute_time_elephant =
+                    remaining_time_blocked_elephant - path_starting_valve_to_valve_me.len() as i32;
 
-            let mut temp_result = current_path.clone();
-            temp_result.push(name_valve.to_string());
+                let mut temp_result = current_path.clone();
+                temp_result.push(name_valve.to_string());
 
-            let valve = valves.get(name_valve).unwrap();
-
-            // If I can move
-            if remaining_time_blocked_me == 0 {
+                let valve = valves.get(name_valve).unwrap();
                 // If moving to the next valve takes longer than the elephant for moving to its next valve
                 if compute_time_elephant < 0 {
                     let temp = build_best_path_part_two(
@@ -313,27 +312,26 @@ fn build_best_path_part_two(
                     }
                 }
             }
-        }
-        // Get the path from the current valve to the connected name_valve for me
-        let path_starting_valve_to_valve_elephant = paths
-            .get(&current_valve_name_elephant)
-            .unwrap()
-            .1
-            .get(name_valve)
-            .unwrap();
-
-        // If within bounds of time limits for elephant
-        if elapsed_time - path_starting_valve_to_valve_elephant.len() as i32 > 0 {
-            let compute_time_me =
-                remaining_time_blocked_me - path_starting_valve_to_valve_elephant.len() as i32;
-
-            let mut temp_result = current_path.clone();
-            temp_result.push(name_valve.to_string());
-
-            let valve = valves.get(name_valve).unwrap();
-
+        } else if remaining_time_blocked_elephant == 0 {
             // If the elephant can move
-            if remaining_time_blocked_elephant == 0 {
+            // Get the path from the current valve to the connected name_valve for me
+            let path_starting_valve_to_valve_elephant = paths
+                .get(&current_valve_name_elephant)
+                .unwrap()
+                .1
+                .get(name_valve)
+                .unwrap();
+
+            // If within bounds of time limits for elephant
+            if elapsed_time - path_starting_valve_to_valve_elephant.len() as i32 > 0 {
+                let compute_time_me =
+                    remaining_time_blocked_me - path_starting_valve_to_valve_elephant.len() as i32;
+
+                let mut temp_result = current_path.clone();
+                temp_result.push(name_valve.to_string());
+
+                let valve = valves.get(name_valve).unwrap();
+
                 if compute_time_me < 0 {
                     // If moving to the next valve takes longer than me for moving to my next valve
                     let temp = build_best_path_part_two(

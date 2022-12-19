@@ -259,6 +259,17 @@ fn aux_two(file: &Path) -> i128 {
             }
             println!("min_depth: {:?}", min_depth);
         }
+
+        // if current_tower.len() > 10 {
+        //     if current_tower.len() % 2 == 1 {
+        //         let up = &current_tower[0..((current_tower.len() - 1) / 2)];
+        //         let down = &current_tower[((current_tower.len() - 1) / 2)..current_tower.len() - 1];
+
+        //         if up == down {
+        //             panic!("Found the culprit for size {}", current_tower.len());
+        //         }
+        //     }
+        // }
     }
 
     current_tower.len() as i128 - 1 + offset as i128
