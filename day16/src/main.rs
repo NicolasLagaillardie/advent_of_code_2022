@@ -237,8 +237,10 @@ fn build_best_path_part_two(
     elapsed_time: i32,
     remaining_time_blocked_me: i32,
     remaining_time_blocked_elephant: i32,
-    current_path: &Vec<String>,
-) -> i32 {
+    current_path: Vec<String>,
+    mut attempted_me: Vec<(String, String)>,
+    mut attempted_elephant: Vec<(String, String)>,
+) -> (i32, Vec<(String, String)>, Vec<(String, String)>) {
     // Get all closed valves
     let mut available_valves = Vec::new();
 
@@ -265,7 +267,12 @@ fn build_best_path_part_two(
                 .unwrap();
 
             // If within bounds of time limits for me
-            if elapsed_time - path_starting_valve_to_valve_me.len() as i32 > 0 {
+            if elapsed_time - path_starting_valve_to_valve_me.len() as i32 > 0
+                && !attempted_elephant
+                    .contains(&(current_valve_name_me.to_string(), name_valve.to_string()))
+            {
+                attempted_me.push((current_valve_name_me.to_string(), name_valve.to_string()));
+
                 let compute_time_elephant =
                     remaining_time_blocked_elephant - path_starting_valve_to_valve_me.len() as i32;
 
@@ -273,6 +280,7 @@ fn build_best_path_part_two(
                 temp_result.push(name_valve.to_string());
 
                 let valve = valves.get(name_valve).unwrap();
+
                 // If moving to the next valve takes longer than the elephant for moving to its next valve
                 if compute_time_elephant < 0 {
                     let temp = build_best_path_part_two(
@@ -286,11 +294,13 @@ fn build_best_path_part_two(
                         elapsed_time - remaining_time_blocked_elephant,
                         -compute_time_elephant,
                         0,
-                        &temp_result,
+                        temp_result.clone(),
+                        attempted_me.clone(),
+                        attempted_elephant.clone(),
                     );
 
-                    if temp > max_pressure {
-                        max_pressure = temp;
+                    if temp.0 > max_pressure {
+                        max_pressure = temp.0;
                     }
                 } else {
                     let temp = build_best_path_part_two(
@@ -304,11 +314,13 @@ fn build_best_path_part_two(
                         elapsed_time - path_starting_valve_to_valve_me.len() as i32,
                         0,
                         compute_time_elephant,
-                        &temp_result,
+                        temp_result.clone(),
+                        attempted_me.clone(),
+                        attempted_elephant.clone(),
                     );
 
-                    if temp > max_pressure {
-                        max_pressure = temp;
+                    if temp.0 > max_pressure {
+                        max_pressure = temp.0;
                     }
                 }
             }
@@ -323,7 +335,17 @@ fn build_best_path_part_two(
                 .unwrap();
 
             // If within bounds of time limits for elephant
-            if elapsed_time - path_starting_valve_to_valve_elephant.len() as i32 > 0 {
+            if elapsed_time - path_starting_valve_to_valve_elephant.len() as i32 > 0
+                && !attempted_me.contains(&(
+                    current_valve_name_elephant.to_string(),
+                    name_valve.to_string(),
+                ))
+            {
+                attempted_elephant.push((
+                    current_valve_name_elephant.to_string(),
+                    name_valve.to_string(),
+                ));
+
                 let compute_time_me =
                     remaining_time_blocked_me - path_starting_valve_to_valve_elephant.len() as i32;
 
@@ -345,11 +367,13 @@ fn build_best_path_part_two(
                         elapsed_time - remaining_time_blocked_me,
                         0,
                         -compute_time_me,
-                        &temp_result,
+                        temp_result.clone(),
+                        attempted_me.clone(),
+                        attempted_elephant.clone(),
                     );
 
-                    if temp > max_pressure {
-                        max_pressure = temp;
+                    if temp.0 > max_pressure {
+                        max_pressure = temp.0;
                     }
                 } else {
                     let temp = build_best_path_part_two(
@@ -363,18 +387,24 @@ fn build_best_path_part_two(
                         elapsed_time - path_starting_valve_to_valve_elephant.len() as i32,
                         compute_time_me,
                         0,
-                        &temp_result,
+                        temp_result.clone(),
+                        attempted_me.clone(),
+                        attempted_elephant.clone(),
                     );
 
-                    if temp > max_pressure {
-                        max_pressure = temp;
+                    if temp.0 > max_pressure {
+                        max_pressure = temp.0;
                     }
                 }
             }
         }
     }
 
-    max_pressure
+    (
+        max_pressure,
+        attempted_me.to_vec(),
+        attempted_elephant.to_vec(),
+    )
 }
 
 /// Function for part 02
@@ -446,8 +476,11 @@ fn aux_two(file: &Path) -> i32 {
         26,
         0,
         0,
-        &vec![starting_valve.clone()],
+        vec![starting_valve.clone()],
+        vec![],
+        vec![],
     )
+    .0
 }
 
 /// Main function
@@ -491,5 +524,6 @@ mod tests {
     fn internal() {
         assert_eq!(aux_one(Path::new("input/test.txt")), 1651);
         assert_eq!(aux_two(Path::new("input/test.txt")), 1707);
+        assert_eq!(aux_two(Path::new("input/01.txt")), 2580);
     }
 }
