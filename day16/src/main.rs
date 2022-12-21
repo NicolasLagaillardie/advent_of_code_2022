@@ -68,34 +68,48 @@ fn aux_build_paths(
 // Build paths from each node to each other nodes
 fn build_paths(
     valves: &HashMap<String, Valve>,
-) -> HashMap<String, (Vec<String>, HashMap<String, Vec<String>>)> {
-    let mut result = HashMap::<String, (Vec<String>, HashMap<String, Vec<String>>)>::new();
+) -> HashMap<String, (Vec<String>, HashMap<String, (Vec<String>, f64)>, f64)> {
+    let mut result =
+        HashMap::<String, (Vec<String>, HashMap<String, (Vec<String>, f64)>, f64)>::new();
 
     for (starting_valve_name, starting_valve) in valves.clone().iter() {
-        let mut temp_result = HashMap::<String, Vec<String>>::new();
+        let mut temp_result = HashMap::<String, (Vec<String>, f64)>::new();
         let mut valid_connected_valves = Vec::new();
+
+        let mut temp_sum_pressure = 0.0;
 
         for (ending_valve_name, ending_valve) in valves.clone().iter() {
             // If starting and ending valve are different and we do not aim for an insignificant valve
             if starting_valve_name != ending_valve_name && ending_valve.flow_rate != 0 {
                 // If start from AA or we start from a significant valve
                 if starting_valve_name == &"AA".to_string() || starting_valve.flow_rate != 0 {
-                    let temp = aux_build_paths(
+                    // from starting_valve_name to ending_valve_name
+                    let temp_shorted_path = aux_build_paths(
                         starting_valve_name.clone(),
                         ending_valve_name.clone(),
                         valves,
                     );
 
-                    temp_result.insert(ending_valve_name.clone(), temp);
+                    let temp_normalised_pressure =
+                        ending_valve.flow_rate as f64 / (30.0 - temp_shorted_path.len() as f64);
+
+                    temp_sum_pressure += temp_normalised_pressure;
+
+                    temp_result.insert(
+                        ending_valve_name.clone(),
+                        (temp_shorted_path, temp_normalised_pressure),
+                    );
                     valid_connected_valves.push(ending_valve_name.clone());
                 }
             }
         }
 
-        result.insert(
-            starting_valve_name.to_string(),
-            (valid_connected_valves, temp_result),
-        );
+        if starting_valve_name == &"AA".to_string() || starting_valve.flow_rate != 0 {
+            result.insert(
+                starting_valve_name.to_string(),
+                (valid_connected_valves, temp_result, temp_sum_pressure),
+            );
+        }
     }
 
     result
@@ -104,11 +118,11 @@ fn build_paths(
 fn build_best_path_part_one(
     current_valve_name: String,
     valves: &HashMap<String, Valve>,
-    paths: &HashMap<String, (Vec<String>, HashMap<String, Vec<String>>)>,
+    paths: &HashMap<String, (Vec<String>, HashMap<String, (Vec<String>, f64)>, f64)>,
     mut max_pressure: i32,
     elapsed_time: i32,
-    current_path: &Vec<String>,
-) -> i32 {
+    mut current_path: Vec<String>,
+) -> (i32, Vec<String>) {
     // Get all closed valves
     let mut available_valves = Vec::new();
 
@@ -121,6 +135,8 @@ fn build_best_path_part_one(
 
     let save_max_pressure = max_pressure.clone();
 
+    let save_current_path = current_path.clone();
+
     // Build paths
     for name_valve in available_valves.iter() {
         // Get the path from the current valve to the connected name_valve
@@ -132,8 +148,8 @@ fn build_best_path_part_one(
             .unwrap();
 
         // If within bounds of time limits
-        if elapsed_time - path_starting_valve_to_valve.len() as i32 > 0 {
-            let mut temp_result = current_path.clone();
+        if elapsed_time - path_starting_valve_to_valve.0.len() as i32 > 0 {
+            let mut temp_result = save_current_path.clone();
             temp_result.push(name_valve.to_string());
 
             let valve = valves.get(name_valve).unwrap();
@@ -143,19 +159,20 @@ fn build_best_path_part_one(
                 valves,
                 paths,
                 save_max_pressure
-                    + ((elapsed_time - path_starting_valve_to_valve.len() as i32)
+                    + ((elapsed_time - path_starting_valve_to_valve.0.len() as i32)
                         * valve.flow_rate),
-                elapsed_time - path_starting_valve_to_valve.len() as i32,
-                &temp_result,
+                elapsed_time - path_starting_valve_to_valve.0.len() as i32,
+                temp_result,
             );
 
-            if temp > max_pressure {
-                max_pressure = temp;
+            if temp.0 > max_pressure {
+                max_pressure = temp.0;
+                current_path = temp.1;
             }
         }
     }
 
-    max_pressure
+    (max_pressure, current_path)
 }
 
 /// Function for part 01
@@ -216,23 +233,31 @@ fn aux_one(file: &Path) -> i32 {
 
     let built_paths = build_paths(&valves);
 
-    println!("built_paths done");
+    println!("built_paths done:");
 
-    build_best_path_part_one(
+    for (k, v) in built_paths.iter() {
+        println!("{:?} : {:?}", k, v);
+    }
+
+    let result = build_best_path_part_one(
         starting_valve.clone(),
         &valves,
         &built_paths,
         0,
         30,
-        &vec![starting_valve.clone()],
-    )
+        vec![starting_valve.clone()],
+    );
+
+    println!("Result: {:?}", result.1);
+
+    result.0
 }
 
 fn build_best_path_part_two(
     current_valve_name_me: String,
     current_valve_name_elephant: String,
     valves: &HashMap<String, Valve>,
-    paths: &HashMap<String, (Vec<String>, HashMap<String, Vec<String>>)>,
+    paths: &HashMap<String, (Vec<String>, HashMap<String, (Vec<String>, f64)>, f64)>,
     mut max_pressure: i32,
     elapsed_time: i32,
     remaining_time_blocked_me: i32,
@@ -267,14 +292,14 @@ fn build_best_path_part_two(
                 .unwrap();
 
             // If within bounds of time limits for me
-            if elapsed_time - path_starting_valve_to_valve_me.len() as i32 > 0
+            if elapsed_time - path_starting_valve_to_valve_me.0.len() as i32 > 0
                 && !attempted_elephant
                     .contains(&(current_valve_name_me.to_string(), name_valve.to_string()))
             {
                 attempted_me.push((current_valve_name_me.to_string(), name_valve.to_string()));
 
-                let compute_time_elephant =
-                    remaining_time_blocked_elephant - path_starting_valve_to_valve_me.len() as i32;
+                let compute_time_elephant = remaining_time_blocked_elephant
+                    - path_starting_valve_to_valve_me.0.len() as i32;
 
                 let mut temp_result = current_path.clone();
                 temp_result.push(name_valve.to_string());
@@ -289,7 +314,7 @@ fn build_best_path_part_two(
                         valves,
                         paths,
                         save_max_pressure
-                            + ((elapsed_time - path_starting_valve_to_valve_me.len() as i32)
+                            + ((elapsed_time - path_starting_valve_to_valve_me.0.len() as i32)
                                 * valve.flow_rate),
                         elapsed_time - remaining_time_blocked_elephant,
                         -compute_time_elephant,
@@ -309,9 +334,9 @@ fn build_best_path_part_two(
                         valves,
                         paths,
                         save_max_pressure
-                            + ((elapsed_time - path_starting_valve_to_valve_me.len() as i32)
+                            + ((elapsed_time - path_starting_valve_to_valve_me.0.len() as i32)
                                 * valve.flow_rate),
-                        elapsed_time - path_starting_valve_to_valve_me.len() as i32,
+                        elapsed_time - path_starting_valve_to_valve_me.0.len() as i32,
                         0,
                         compute_time_elephant,
                         temp_result.clone(),
@@ -335,7 +360,7 @@ fn build_best_path_part_two(
                 .unwrap();
 
             // If within bounds of time limits for elephant
-            if elapsed_time - path_starting_valve_to_valve_elephant.len() as i32 > 0
+            if elapsed_time - path_starting_valve_to_valve_elephant.0.len() as i32 > 0
                 && !attempted_me.contains(&(
                     current_valve_name_elephant.to_string(),
                     name_valve.to_string(),
@@ -346,8 +371,8 @@ fn build_best_path_part_two(
                     name_valve.to_string(),
                 ));
 
-                let compute_time_me =
-                    remaining_time_blocked_me - path_starting_valve_to_valve_elephant.len() as i32;
+                let compute_time_me = remaining_time_blocked_me
+                    - path_starting_valve_to_valve_elephant.0.len() as i32;
 
                 let mut temp_result = current_path.clone();
                 temp_result.push(name_valve.to_string());
@@ -362,7 +387,8 @@ fn build_best_path_part_two(
                         valves,
                         paths,
                         save_max_pressure
-                            + ((elapsed_time - path_starting_valve_to_valve_elephant.len() as i32)
+                            + ((elapsed_time
+                                - path_starting_valve_to_valve_elephant.0.len() as i32)
                                 * valve.flow_rate),
                         elapsed_time - remaining_time_blocked_me,
                         0,
@@ -382,9 +408,10 @@ fn build_best_path_part_two(
                         valves,
                         paths,
                         save_max_pressure
-                            + ((elapsed_time - path_starting_valve_to_valve_elephant.len() as i32)
+                            + ((elapsed_time
+                                - path_starting_valve_to_valve_elephant.0.len() as i32)
                                 * valve.flow_rate),
-                        elapsed_time - path_starting_valve_to_valve_elephant.len() as i32,
+                        elapsed_time - path_starting_valve_to_valve_elephant.0.len() as i32,
                         compute_time_me,
                         0,
                         temp_result.clone(),
@@ -524,6 +551,5 @@ mod tests {
     fn internal() {
         assert_eq!(aux_one(Path::new("input/test.txt")), 1651);
         assert_eq!(aux_two(Path::new("input/test.txt")), 1707);
-        assert_eq!(aux_two(Path::new("input/01.txt")), 2580);
     }
 }
