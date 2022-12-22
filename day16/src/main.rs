@@ -91,7 +91,7 @@ fn build_paths(
                     );
 
                     let temp_normalised_pressure =
-                        ending_valve.flow_rate as f64 / (30.0 - temp_shorted_path.len() as f64);
+                        ending_valve.flow_rate as f64 / temp_shorted_path.len() as f64;
 
                     temp_sum_pressure += temp_normalised_pressure;
 
@@ -100,6 +100,14 @@ fn build_paths(
                         (temp_shorted_path, temp_normalised_pressure),
                     );
                     valid_connected_valves.push(ending_valve_name.clone());
+                }
+
+                if (!ending_valve.connected_valves.contains(starting_valve_name)
+                    && starting_valve.connected_valves.contains(ending_valve_name))
+                    || (ending_valve.connected_valves.contains(starting_valve_name)
+                        && !starting_valve.connected_valves.contains(ending_valve_name))
+                {
+                    panic!("Error with {ending_valve_name} / {starting_valve_name}");
                 }
             }
         }
@@ -115,97 +123,115 @@ fn build_paths(
     result
 }
 
+// Compute released pressure from given path
+fn compute_released_pressure(
+    valves: &HashMap<String, Valve>,
+    matrix_paths: &HashMap<String, (Vec<String>, HashMap<String, (Vec<String>, f64)>, f64)>,
+    tested_path: &Vec<String>,
+    mut elapsed_time: i32,
+) -> i32 {
+    let mut result = 0;
+
+    for (index, name_end_valve) in tested_path[1..tested_path.len()].iter().enumerate() {
+        let name_start_valve = tested_path[index].to_string();
+        let (_, paths_from_start_to_all, _) = matrix_paths.get(&name_start_valve).unwrap();
+        let (shortest_path, _) = paths_from_start_to_all.get(name_end_valve).unwrap();
+        let pressure_end_valve = valves.get(name_end_valve).unwrap().flow_rate;
+
+        if elapsed_time - shortest_path.len() as i32 > 0 {
+            result += (elapsed_time - shortest_path.len() as i32) * pressure_end_valve;
+            elapsed_time -= shortest_path.len() as i32;
+        } else {
+            return result;
+        }
+    }
+
+    result
+}
+
+fn get_permutations(list: &mut Vec<String>, k: usize) -> Vec<Vec<String>> {
+    let mut result = Vec::new();
+
+    if k == 1 {
+        return vec![list.to_vec()];
+    }
+
+    for i in 0..k {
+        let mut temp = get_permutations(list, k - 1);
+
+        if k % 2 == 1 {
+            list.swap(0, k - 1);
+        } else {
+            list.swap(i, k - 1);
+        }
+
+        result.append(&mut temp);
+    }
+
+    result
+}
+
 fn build_best_path_part_one(
     starting_valve_name: String,
     valves: &HashMap<String, Valve>,
-    paths: &HashMap<String, (Vec<String>, HashMap<String, (Vec<String>, f64)>, f64)>,
+    matrix_paths: &HashMap<String, (Vec<String>, HashMap<String, (Vec<String>, f64)>, f64)>,
     elapsed_time: i32,
 ) -> i32 {
-    let mut tested_paths = Vec::new();
+    let mut final_path = vec![starting_valve_name];
 
-    let mut max_pressure = 0;
+    while final_path.len() != matrix_paths.len() {
+        let mut heaviest_normalised_pressure = 0.0;
+        let mut next_valve = "".to_string();
 
-    // First, build all starting path
-    for (name_valve, valve) in valves.iter() {
-        if valve.flow_rate > 0 {
-            // Get the path from the current valve to the connected name_valve
-            let path_starting_valve_to_valve = paths
-                .get(&starting_valve_name)
-                .unwrap()
-                .1
-                .get(name_valve)
-                .unwrap();
+        let name_start_valve = final_path[final_path.len() - 1].clone();
+        let other_valves = &matrix_paths.get(&name_start_valve).unwrap().1;
 
-            let new_elapsed_time = elapsed_time - path_starting_valve_to_valve.0.len() as i32;
-
-            tested_paths.push((
-                vec![starting_valve_name.clone(), name_valve.to_string()], // New path
-                new_elapsed_time * valve.flow_rate,                        // Released pressure
-                new_elapsed_time,                                          // Elapsed time
-            ));
-
-            if new_elapsed_time * valve.flow_rate > max_pressure {
-                max_pressure = new_elapsed_time * valve.flow_rate;
+        for (name_end_valve, info_end_valve) in other_valves.iter() {
+            if !final_path.contains(name_end_valve)
+                && info_end_valve.1 > heaviest_normalised_pressure
+            {
+                heaviest_normalised_pressure = info_end_valve.1;
+                next_valve = name_end_valve.to_string();
             }
         }
+
+        final_path.push(next_valve.clone());
     }
+
+    let mut max_pressure =
+        compute_released_pressure(valves, matrix_paths, &final_path, elapsed_time);
+
+    let mut target_k = 5;
 
     let mut modified = true;
 
     while modified {
         modified = false;
 
-        let mut next_tested_paths = Vec::new();
+        for index in 0..final_path.len() - target_k {
+            let head = final_path[0..index + 1].to_vec();
+            let tail = final_path[index + 1..final_path.len()].to_vec();
 
-        // For each paths to test
-        for (tested_path, released_pressure_tested_path, elapsed_time_tested_path) in
-            tested_paths.iter()
-        {
-            // Last opened valve = starting valve
-            let name_start_valve = tested_path[tested_path.len() - 1].to_string();
+            let permutations = get_permutations(&mut tail.clone(), target_k);
 
-            // For each other valves with positive pressure
-            for (name_end_valve, end_valve) in valves.iter() {
-                if end_valve.flow_rate > 0 && !tested_path.contains(name_end_valve) {
-                    // Get the path from the current valve to the connected name_valve
-                    let path_starting_valve_to_valve = paths
-                        .get(&name_start_valve)
-                        .unwrap()
-                        .1
-                        .get(name_end_valve)
-                        .unwrap();
+            for mut permutation in permutations {
+                let mut attempt = head.clone();
+                attempt.append(&mut permutation);
+                let pressure_attempt =
+                    compute_released_pressure(valves, matrix_paths, &attempt, elapsed_time);
 
-                    // If adding this new valve is not too far w.r.t the remaing time
-                    if elapsed_time_tested_path - path_starting_valve_to_valve.0.len() as i32 > 0 {
-                        let mut temp_test_path = tested_path.clone();
-                        temp_test_path.push(name_end_valve.clone());
-
-                        let new_released_pressure = released_pressure_tested_path
-                            + (elapsed_time_tested_path
-                                - path_starting_valve_to_valve.0.len() as i32)
-                                * end_valve.flow_rate;
-
-                        next_tested_paths.push((
-                            temp_test_path.clone(),
-                            released_pressure_tested_path
-                                + (elapsed_time_tested_path
-                                    - path_starting_valve_to_valve.0.len() as i32)
-                                    * end_valve.flow_rate,
-                            elapsed_time_tested_path - path_starting_valve_to_valve.0.len() as i32,
-                        ));
-
-                        if new_released_pressure > max_pressure {
-                            max_pressure = new_released_pressure;
-                        }
-
-                        modified = true;
-                    }
+                if pressure_attempt > max_pressure {
+                    max_pressure = pressure_attempt;
+                    final_path = attempt.clone();
+                    modified = true;
                 }
             }
         }
 
-        tested_paths = next_tested_paths;
+        target_k += 1;
     }
+
+    println!("Final path : {final_path:?}");
 
     max_pressure
 }
@@ -270,6 +296,11 @@ fn aux_one(file: &Path) -> i32 {
 
     println!("built_paths done:");
 
+    for (k, v) in built_paths.iter() {
+        println!("{:?} : {:?}", k, v);
+        println!("");
+    }
+
     build_best_path_part_one(starting_valve, &valves, &built_paths, 30)
 }
 
@@ -279,7 +310,7 @@ fn build_best_path_part_two(
     paths: &HashMap<String, (Vec<String>, HashMap<String, (Vec<String>, f64)>, f64)>,
     elapsed_time: i32,
 ) -> i32 {
-    let mut tested_paths_me = Vec::new();
+    let mut tested_paths = Vec::new();
 
     let mut max_pressure = 0;
 
@@ -296,10 +327,12 @@ fn build_best_path_part_two(
 
             let new_elapsed_time = elapsed_time - path_starting_valve_to_valve.0.len() as i32;
 
-            tested_paths_me.push((
-                vec![starting_valve_name.clone(), name_valve.to_string()], // New path
+            tested_paths.push((
+                vec![starting_valve_name.clone(), name_valve.to_string()], // New path me
+                vec![starting_valve_name.clone()],                         // New path elephant
                 new_elapsed_time * valve.flow_rate,                        // Released pressure
-                new_elapsed_time,                                          // Elapsed time
+                new_elapsed_time,                                          // Elapsed time me
+                elapsed_time,                                              // Elapsed time elephant
             ));
 
             if new_elapsed_time * valve.flow_rate > max_pressure {
@@ -310,50 +343,100 @@ fn build_best_path_part_two(
 
     let mut modified = true;
 
+    let mut final_path = (Vec::new(), Vec::new());
+
     while modified {
         modified = false;
 
-        let mut next_tested_paths_me = Vec::new();
+        let mut next_tested_paths = Vec::new();
 
         // For each paths to test
-        for (tested_path, released_pressure_tested_path, elapsed_time_tested_path) in
-            tested_paths_me.iter()
+        for (
+            tested_path_me,
+            tested_path_elephant,
+            released_pressure_tested_path,
+            elapsed_time_tested_path_me,
+            elapsed_time_tested_path_elephant,
+        ) in tested_paths.iter()
         {
             // Last opened valve = starting valve
-            let name_start_valve = tested_path[tested_path.len() - 1].to_string();
+            let name_start_valve_me = tested_path_me[tested_path_me.len() - 1].to_string();
+            let name_start_valve_elephant =
+                tested_path_elephant[tested_path_elephant.len() - 1].to_string();
 
             // For each other valves with positive pressure
             for (name_end_valve, end_valve) in valves.iter() {
-                if end_valve.flow_rate > 0 && !tested_path.contains(name_end_valve) {
+                if end_valve.flow_rate > 0
+                    && !tested_path_me.contains(name_end_valve)
+                    && !tested_path_elephant.contains(name_end_valve)
+                {
                     // Get the path from the current valve to the connected name_valve
                     let path_starting_valve_to_valve = paths
-                        .get(&name_start_valve)
+                        .get(&name_start_valve_me)
                         .unwrap()
                         .1
                         .get(name_end_valve)
                         .unwrap();
 
+                    let new_elapsed_time_tested_path_me =
+                        elapsed_time_tested_path_me - path_starting_valve_to_valve.0.len() as i32;
+
                     // If adding this new valve is not too far w.r.t the remaing time
-                    if elapsed_time_tested_path - path_starting_valve_to_valve.0.len() as i32 > 0 {
-                        let mut temp_test_path = tested_path.clone();
-                        temp_test_path.push(name_end_valve.clone());
+                    if new_elapsed_time_tested_path_me > 0 {
+                        let mut temp_tested_path_me = tested_path_me.clone();
+                        temp_tested_path_me.push(name_end_valve.clone());
 
                         let new_released_pressure = released_pressure_tested_path
-                            + (elapsed_time_tested_path
-                                - path_starting_valve_to_valve.0.len() as i32)
-                                * end_valve.flow_rate;
+                            + new_elapsed_time_tested_path_me * end_valve.flow_rate;
 
-                        next_tested_paths_me.push((
-                            temp_test_path.clone(),
+                        next_tested_paths.push((
+                            temp_tested_path_me.clone(),
+                            tested_path_elephant.clone(),
                             released_pressure_tested_path
-                                + (elapsed_time_tested_path
-                                    - path_starting_valve_to_valve.0.len() as i32)
-                                    * end_valve.flow_rate,
-                            elapsed_time_tested_path - path_starting_valve_to_valve.0.len() as i32,
+                                + new_elapsed_time_tested_path_me * end_valve.flow_rate,
+                            new_elapsed_time_tested_path_me,
+                            *elapsed_time_tested_path_elephant,
                         ));
 
                         if new_released_pressure > max_pressure {
                             max_pressure = new_released_pressure;
+                            final_path.0 = temp_tested_path_me.clone();
+                        }
+
+                        modified = true;
+                    }
+
+                    // Get the path from the current valve to the connected name_valve
+                    let path_starting_valve_to_valve = paths
+                        .get(&name_start_valve_elephant)
+                        .unwrap()
+                        .1
+                        .get(name_end_valve)
+                        .unwrap();
+
+                    let new_elapsed_time_tested_path_elephant = elapsed_time_tested_path_elephant
+                        - path_starting_valve_to_valve.0.len() as i32;
+
+                    // If adding this new valve is not too far w.r.t the remaing time
+                    if new_elapsed_time_tested_path_elephant > 0 {
+                        let mut temp_tested_path_elephant = tested_path_elephant.clone();
+                        temp_tested_path_elephant.push(name_end_valve.clone());
+
+                        let new_released_pressure = released_pressure_tested_path
+                            + new_elapsed_time_tested_path_elephant * end_valve.flow_rate;
+
+                        next_tested_paths.push((
+                            tested_path_me.clone(),
+                            temp_tested_path_elephant.clone(),
+                            released_pressure_tested_path
+                                + new_elapsed_time_tested_path_elephant * end_valve.flow_rate,
+                            *elapsed_time_tested_path_me,
+                            new_elapsed_time_tested_path_elephant,
+                        ));
+
+                        if new_released_pressure > max_pressure {
+                            max_pressure = new_released_pressure;
+                            final_path.1 = temp_tested_path_elephant.clone();
                         }
 
                         modified = true;
@@ -362,7 +445,7 @@ fn build_best_path_part_two(
             }
         }
 
-        tested_paths_me = next_tested_paths_me;
+        tested_paths = next_tested_paths;
     }
 
     max_pressure
