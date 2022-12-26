@@ -336,7 +336,7 @@ mod tests {
 
     #[test]
     fn internal() {
-        assert_eq!(aux_one(Path::new("input/test.txt")), 3068);
-        assert_eq!(aux_two(Path::new("input/test.txt")), 1514285714288);
+        assert_eq!(aux_one(Path::new("input/test.txt")), 64);
+        // assert_eq!(aux_two(Path::new("input/test.txt")), 1514285714288);
     }
 }
