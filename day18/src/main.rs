@@ -5,7 +5,7 @@ use std::io::{stdin, BufRead, BufReader};
 use std::path::Path;
 
 /// Function for part 01
-fn aux_one(file: &Path) -> i128 {
+fn aux_one(file: &Path) -> i32 {
     // Open file
     let file = File::open(file).unwrap();
 
@@ -55,11 +55,11 @@ fn aux_one(file: &Path) -> i128 {
         cubes.push((x, y, z));
     }
 
-    cubes.len() as i128 * 6 - common_faces * 2
+    cubes.len() as i32 * 6 - common_faces * 2
 }
 
 /// Function for part 02
-fn aux_two(file: &Path) -> i128 {
+fn aux_two(file: &Path) -> i32 {
     // Open file
     let file = File::open(file).unwrap();
 
@@ -227,17 +227,9 @@ fn aux_two(file: &Path) -> i128 {
     let mut coords_y = borders_y.unwrap();
     let mut coords_z = borders_z.unwrap();
 
-    println!("coords_x: {coords_x:?}");
-    println!("coords_y: {coords_y:?}");
-    println!("coords_z: {coords_z:?}");
-
     coords_x = (coords_x.0 - 1, coords_x.1 + 1);
     coords_y = (coords_y.0 - 1, coords_y.1 + 1);
     coords_z = (coords_z.0 - 1, coords_z.1 + 1);
-
-    println!("coords_x: {coords_x:?}");
-    println!("coords_y: {coords_y:?}");
-    println!("coords_z: {coords_z:?}");
 
     let mut outer_cubes = vec![(coords_x.0, coords_y.0, coords_z.0)];
 
@@ -303,29 +295,10 @@ fn aux_two(file: &Path) -> i128 {
             }
         }
 
-        // println!(
-        //     "temp_to_explore_outer_cubes: {:?}",
-        //     temp_to_explore_outer_cubes
-        // );
-
-        // println!("outer_cubes: {:?}", outer_cubes);
-
-        // println!("to_explore_outer_cubes: {:?}", to_explore_outer_cubes);
-
         outer_cubes.append(&mut temp_to_explore_outer_cubes.clone());
 
         to_explore_outer_cubes = temp_to_explore_outer_cubes;
-
-        // println!("to_explore_outer_cubes: {:?}", to_explore_outer_cubes);
     }
-
-    println!("outer cube done");
-
-    // println!("to_explore_outer_cubes: {to_explore_outer_cubes:?}");
-
-    // println!("outer_cubes: {outer_cubes:?}");
-
-    // let mut inner_cubes = Vec::new();
 
     let mut hidden_faces = 0;
 
@@ -357,148 +330,12 @@ fn aux_two(file: &Path) -> i128 {
                     if cubes.contains(&(x, y, z + 1)) {
                         hidden_faces += 1;
                     }
-
-                    // inner_cubes.push((x, y, z));
                 }
             }
         }
     }
 
-    println!("inner cube done");
-
-    // println!("inner_cubes: {inner_cubes:?}");
-
-    // let mut is_not_in_bubble = Vec::new();
-
-    // let mut explored_bubbles = Vec::new();
-
-    // let mut is_bubble;
-
-    // println!("potential_air_bubbles: {potential_air_bubbles:?}");
-
-    // for (index, potential_air_bubble) in potential_air_bubbles.iter().enumerate() {
-    //     if !is_not_in_bubble.contains(potential_air_bubble)
-    //         && !explored_bubbles.contains(potential_air_bubble)
-    //     {
-    //         println!(
-    //             "Testing: {potential_air_bubble:?} / progress: {}",
-    //             index as f64 / potential_air_bubbles.len() as f64
-    //         );
-
-    //         let mut temp_explored_bubbles = explored_bubbles.clone();
-
-    //         let mut to_explore_bubbles = vec![*potential_air_bubble];
-
-    //         let mut temp_hidden_faces = 0;
-
-    //         is_bubble = true;
-
-    //         'level_zero: while is_bubble {
-    //             is_bubble = true;
-
-    //             let mut temp_to_explore_bubbles = Vec::new();
-
-    //             for (x, y, z) in to_explore_bubbles.iter() {
-    //                 // If we go outside the borders
-    //                 if x - 1 < coords_x.0
-    //                     || x + 1 > coords_x.1
-    //                     || y - 1 < coords_y.0
-    //                     || y + 1 > coords_y.1
-    //                     || z - 1 < coords_z.0
-    //                     || z + 1 > coords_z.1
-    //                 {
-    //                     is_bubble = false;
-    //                     break 'level_zero;
-    //                 }
-
-    //                 if !cubes.contains(&(*x - 1, *y, *z)) {
-    //                     if !explored_bubbles.contains(&(*x - 1, *y, *z))
-    //                         && !temp_explored_bubbles.contains(&(*x - 1, *y, *z))
-    //                     {
-    //                         temp_to_explore_bubbles.push((*x - 1, *y, *z));
-    //                         temp_explored_bubbles.push((*x - 1, *y, *z));
-    //                     }
-    //                 } else {
-    //                     temp_hidden_faces += 1;
-    //                 }
-
-    //                 if !cubes.contains(&(*x + 1, *y, *z)) {
-    //                     if !explored_bubbles.contains(&(*x + 1, *y, *z))
-    //                         && !temp_explored_bubbles.contains(&(*x + 1, *y, *z))
-    //                     {
-    //                         temp_to_explore_bubbles.push((*x + 1, *y, *z));
-    //                         temp_explored_bubbles.push((*x + 1, *y, *z));
-    //                     }
-    //                 } else {
-    //                     temp_hidden_faces += 1;
-    //                 }
-
-    //                 if !cubes.contains(&(*x, *y - 1, *z)) {
-    //                     if !explored_bubbles.contains(&(*x, *y - 1, *z))
-    //                         && !temp_explored_bubbles.contains(&(*x, *y - 1, *z))
-    //                     {
-    //                         temp_to_explore_bubbles.push((*x, *y - 1, *z));
-    //                         temp_explored_bubbles.push((*x, *y - 1, *z));
-    //                     }
-    //                 } else {
-    //                     temp_hidden_faces += 1;
-    //                 }
-
-    //                 if !cubes.contains(&(*x, *y + 1, *z)) {
-    //                     if !explored_bubbles.contains(&(*x, *y + 1, *z))
-    //                         && !temp_explored_bubbles.contains(&(*x, *y + 1, *z))
-    //                     {
-    //                         temp_to_explore_bubbles.push((*x, *y + 1, *z));
-    //                         temp_explored_bubbles.push((*x, *y + 1, *z));
-    //                     }
-    //                 } else {
-    //                     temp_hidden_faces += 1;
-    //                 }
-
-    //                 if !cubes.contains(&(*x, *y, *z - 1)) {
-    //                     if !explored_bubbles.contains(&(*x, *y, *z - 1))
-    //                         && !temp_explored_bubbles.contains(&(*x, *y, *z - 1))
-    //                     {
-    //                         temp_to_explore_bubbles.push((*x, *y, *z - 1));
-    //                         temp_explored_bubbles.push((*x, *y, *z - 1));
-    //                     }
-    //                 } else {
-    //                     temp_hidden_faces += 1;
-    //                 }
-
-    //                 if !cubes.contains(&(*x, *y, *z + 1)) {
-    //                     if !explored_bubbles.contains(&(*x, *y, *z + 1))
-    //                         && !temp_explored_bubbles.contains(&(*x, *y, *z + 1))
-    //                     {
-    //                         temp_to_explore_bubbles.push((*x, *y, *z + 1));
-    //                         temp_explored_bubbles.push((*x, *y, *z + 1));
-    //                     }
-    //                 } else {
-    //                     temp_hidden_faces += 1;
-    //                 }
-    //             }
-
-    //             if temp_to_explore_bubbles.is_empty() {
-    //                 break 'level_zero;
-    //             } else {
-    //                 to_explore_bubbles = temp_to_explore_bubbles;
-    //             }
-    //         }
-
-    //         if is_bubble {
-    //             println!("is bubble");
-    //             hidden_faces += temp_hidden_faces;
-    //             explored_bubbles.append(&mut temp_explored_bubbles);
-    //         } else {
-    //             println!("is not bubble");
-    //             is_not_in_bubble.append(&mut temp_explored_bubbles);
-    //         }
-    //     }
-    // }
-
-    // println!("explored_bubbles: {explored_bubbles:?}");
-
-    cubes.len() as i128 * 6 - common_faces * 2 - hidden_faces
+    cubes.len() as i32 * 6 - common_faces * 2 - hidden_faces
 }
 
 /// Main function
