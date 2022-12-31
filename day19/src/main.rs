@@ -81,7 +81,7 @@ impl Clone for Robots {
     }
 }
 
-fn aux_new_thread(
+fn aux_new_thread_one(
     blueprint: Blueprint,
     mut resources: Resources,
     robots: Robots,
@@ -89,6 +89,12 @@ fn aux_new_thread(
 ) -> u64 {
     if remaining_time <= 0 {
         return resources.geode;
+    }
+
+    if blueprint.cost_geode_robot.obsidian
+        > resources.obsidian + remaining_time * (robots.obsidian + 2)
+    {
+        return resources.geode + remaining_time * robots.geode;
     }
 
     let mut max_geodes = 0;
@@ -101,70 +107,6 @@ fn aux_new_thread(
     for time in (1..=remaining_time).rev() {
         if ore_robot_built && clay_robot_built && obsidian_robot_built && geode_robot_built {
             return max_geodes;
-        }
-
-        if resources.ore >= blueprint.cost_ore_robot.ore && !ore_robot_built {
-            let mut new_resources = resources.clone();
-            new_resources.ore -= blueprint.cost_ore_robot.ore;
-
-            new_resources.ore += robots.ore;
-            new_resources.clay += robots.clay;
-            new_resources.obsidian += robots.obsidian;
-            new_resources.geode += robots.geode;
-
-            let mut new_robots = robots.clone();
-            new_robots.ore += 1;
-
-            max_geodes = max(
-                max_geodes,
-                aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
-            );
-
-            ore_robot_built = true;
-        }
-
-        if resources.ore >= blueprint.cost_clay_robot.ore && !clay_robot_built {
-            let mut new_resources = resources.clone();
-            new_resources.ore -= blueprint.cost_clay_robot.ore;
-
-            new_resources.ore += robots.ore;
-            new_resources.clay += robots.clay;
-            new_resources.obsidian += robots.obsidian;
-            new_resources.geode += robots.geode;
-
-            let mut new_robots = robots.clone();
-            new_robots.clay += 1;
-
-            max_geodes = max(
-                max_geodes,
-                aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
-            );
-
-            clay_robot_built = true;
-        }
-
-        if resources.ore >= blueprint.cost_obsidian_robot.ore
-            && resources.clay >= blueprint.cost_obsidian_robot.clay
-            && !obsidian_robot_built
-        {
-            let mut new_resources = resources.clone();
-            new_resources.ore -= blueprint.cost_obsidian_robot.ore;
-            new_resources.clay -= blueprint.cost_obsidian_robot.clay;
-
-            new_resources.ore += robots.ore;
-            new_resources.clay += robots.clay;
-            new_resources.obsidian += robots.obsidian;
-            new_resources.geode += robots.geode;
-
-            let mut new_robots = robots.clone();
-            new_robots.obsidian += 1;
-
-            max_geodes = max(
-                max_geodes,
-                aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
-            );
-
-            obsidian_robot_built = true;
         }
 
         if resources.ore >= blueprint.cost_geode_robot.ore
@@ -185,10 +127,72 @@ fn aux_new_thread(
 
             max_geodes = max(
                 max_geodes,
-                aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
+                aux_new_thread_one(blueprint.clone(), new_resources, new_robots, time - 1),
             );
 
             geode_robot_built = true;
+        } else if resources.ore >= blueprint.cost_obsidian_robot.ore
+            && resources.clay >= blueprint.cost_obsidian_robot.clay
+            && !obsidian_robot_built
+        {
+            let mut new_resources = resources.clone();
+            new_resources.ore -= blueprint.cost_obsidian_robot.ore;
+            new_resources.clay -= blueprint.cost_obsidian_robot.clay;
+
+            new_resources.ore += robots.ore;
+            new_resources.clay += robots.clay;
+            new_resources.obsidian += robots.obsidian;
+            new_resources.geode += robots.geode;
+
+            let mut new_robots = robots.clone();
+            new_robots.obsidian += 1;
+
+            max_geodes = max(
+                max_geodes,
+                aux_new_thread_one(blueprint.clone(), new_resources, new_robots, time - 1),
+            );
+
+            obsidian_robot_built = true;
+        }
+
+        if resources.ore >= blueprint.cost_clay_robot.ore && !clay_robot_built {
+            let mut new_resources = resources.clone();
+            new_resources.ore -= blueprint.cost_clay_robot.ore;
+
+            new_resources.ore += robots.ore;
+            new_resources.clay += robots.clay;
+            new_resources.obsidian += robots.obsidian;
+            new_resources.geode += robots.geode;
+
+            let mut new_robots = robots.clone();
+            new_robots.clay += 1;
+
+            max_geodes = max(
+                max_geodes,
+                aux_new_thread_one(blueprint.clone(), new_resources, new_robots, time - 1),
+            );
+
+            clay_robot_built = true;
+        }
+
+        if resources.ore >= blueprint.cost_ore_robot.ore && !ore_robot_built {
+            let mut new_resources = resources.clone();
+            new_resources.ore -= blueprint.cost_ore_robot.ore;
+
+            new_resources.ore += robots.ore;
+            new_resources.clay += robots.clay;
+            new_resources.obsidian += robots.obsidian;
+            new_resources.geode += robots.geode;
+
+            let mut new_robots = robots.clone();
+            new_robots.ore += 1;
+
+            max_geodes = max(
+                max_geodes,
+                aux_new_thread_one(blueprint.clone(), new_resources, new_robots, time - 1),
+            );
+
+            ore_robot_built = true;
         }
 
         resources.ore += robots.ore;
@@ -234,70 +238,6 @@ fn start_new_thread_one(
                 return max_geodes * blueprint_index;
             }
 
-            if resources.ore >= blueprint.cost_ore_robot.ore && !ore_robot_built {
-                let mut new_resources = resources.clone();
-                new_resources.ore -= blueprint.cost_ore_robot.ore;
-
-                new_resources.ore += robots.ore;
-                new_resources.clay += robots.clay;
-                new_resources.obsidian += robots.obsidian;
-                new_resources.geode += robots.geode;
-
-                let mut new_robots = robots.clone();
-                new_robots.ore += 1;
-
-                max_geodes = max(
-                    max_geodes,
-                    aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
-                );
-
-                ore_robot_built = true;
-            }
-
-            if resources.ore >= blueprint.cost_clay_robot.ore && !clay_robot_built {
-                let mut new_resources = resources.clone();
-                new_resources.ore -= blueprint.cost_clay_robot.ore;
-
-                new_resources.ore += robots.ore;
-                new_resources.clay += robots.clay;
-                new_resources.obsidian += robots.obsidian;
-                new_resources.geode += robots.geode;
-
-                let mut new_robots = robots.clone();
-                new_robots.clay += 1;
-
-                max_geodes = max(
-                    max_geodes,
-                    aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
-                );
-
-                clay_robot_built = true;
-            }
-
-            if resources.ore >= blueprint.cost_obsidian_robot.ore
-                && resources.clay >= blueprint.cost_obsidian_robot.clay
-                && !obsidian_robot_built
-            {
-                let mut new_resources = resources.clone();
-                new_resources.ore -= blueprint.cost_obsidian_robot.ore;
-                new_resources.clay -= blueprint.cost_obsidian_robot.clay;
-
-                new_resources.ore += robots.ore;
-                new_resources.clay += robots.clay;
-                new_resources.obsidian += robots.obsidian;
-                new_resources.geode += robots.geode;
-
-                let mut new_robots = robots.clone();
-                new_robots.obsidian += 1;
-
-                max_geodes = max(
-                    max_geodes,
-                    aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
-                );
-
-                obsidian_robot_built = true;
-            }
-
             if resources.ore >= blueprint.cost_geode_robot.ore
                 && resources.obsidian >= blueprint.cost_geode_robot.obsidian
                 && !geode_robot_built
@@ -316,10 +256,72 @@ fn start_new_thread_one(
 
                 max_geodes = max(
                     max_geodes,
-                    aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
+                    aux_new_thread_one(blueprint.clone(), new_resources, new_robots, time - 1),
                 );
 
                 geode_robot_built = true;
+            } else if resources.ore >= blueprint.cost_obsidian_robot.ore
+                && resources.clay >= blueprint.cost_obsidian_robot.clay
+                && !obsidian_robot_built
+            {
+                let mut new_resources = resources.clone();
+                new_resources.ore -= blueprint.cost_obsidian_robot.ore;
+                new_resources.clay -= blueprint.cost_obsidian_robot.clay;
+
+                new_resources.ore += robots.ore;
+                new_resources.clay += robots.clay;
+                new_resources.obsidian += robots.obsidian;
+                new_resources.geode += robots.geode;
+
+                let mut new_robots = robots.clone();
+                new_robots.obsidian += 1;
+
+                max_geodes = max(
+                    max_geodes,
+                    aux_new_thread_one(blueprint.clone(), new_resources, new_robots, time - 1),
+                );
+
+                obsidian_robot_built = true;
+            }
+
+            if resources.ore >= blueprint.cost_clay_robot.ore && !clay_robot_built {
+                let mut new_resources = resources.clone();
+                new_resources.ore -= blueprint.cost_clay_robot.ore;
+
+                new_resources.ore += robots.ore;
+                new_resources.clay += robots.clay;
+                new_resources.obsidian += robots.obsidian;
+                new_resources.geode += robots.geode;
+
+                let mut new_robots = robots.clone();
+                new_robots.clay += 1;
+
+                max_geodes = max(
+                    max_geodes,
+                    aux_new_thread_one(blueprint.clone(), new_resources, new_robots, time - 1),
+                );
+
+                clay_robot_built = true;
+            }
+
+            if resources.ore >= blueprint.cost_ore_robot.ore && !ore_robot_built {
+                let mut new_resources = resources.clone();
+                new_resources.ore -= blueprint.cost_ore_robot.ore;
+
+                new_resources.ore += robots.ore;
+                new_resources.clay += robots.clay;
+                new_resources.obsidian += robots.obsidian;
+                new_resources.geode += robots.geode;
+
+                let mut new_robots = robots.clone();
+                new_robots.ore += 1;
+
+                max_geodes = max(
+                    max_geodes,
+                    aux_new_thread_one(blueprint.clone(), new_resources, new_robots, time - 1),
+                );
+
+                ore_robot_built = true;
             }
 
             resources.ore += robots.ore;
@@ -436,6 +438,129 @@ fn aux_one(file: &Path) -> u64 {
     result
 }
 
+fn aux_new_thread_two(
+    blueprint: Blueprint,
+    mut resources: Resources,
+    robots: Robots,
+    remaining_time: u64,
+) -> u64 {
+    if remaining_time <= 0 {
+        return resources.geode;
+    }
+
+    if blueprint.cost_geode_robot.obsidian
+        > resources.obsidian + remaining_time * (robots.obsidian + 2)
+    {
+        return resources.geode + remaining_time * robots.geode;
+    }
+
+    let mut max_geodes = 0;
+
+    let mut ore_robot_built = false;
+    let mut clay_robot_built = false;
+    let mut obsidian_robot_built = false;
+    let mut geode_robot_built = false;
+
+    for time in (1..=remaining_time).rev() {
+        if ore_robot_built && clay_robot_built && obsidian_robot_built && geode_robot_built {
+            return max_geodes;
+        }
+
+        if resources.ore >= blueprint.cost_geode_robot.ore
+            && resources.obsidian >= blueprint.cost_geode_robot.obsidian
+            && !geode_robot_built
+        {
+            let mut new_resources = resources.clone();
+            new_resources.ore -= blueprint.cost_geode_robot.ore;
+            new_resources.obsidian -= blueprint.cost_geode_robot.obsidian;
+
+            new_resources.ore += robots.ore;
+            new_resources.clay += robots.clay;
+            new_resources.obsidian += robots.obsidian;
+            new_resources.geode += robots.geode;
+
+            let mut new_robots = robots.clone();
+            new_robots.geode += 1;
+
+            max_geodes = max(
+                max_geodes,
+                aux_new_thread_two(blueprint.clone(), new_resources, new_robots, time - 1),
+            );
+
+            geode_robot_built = true;
+        } else if resources.ore >= blueprint.cost_obsidian_robot.ore
+            && resources.clay >= blueprint.cost_obsidian_robot.clay
+            && !obsidian_robot_built
+        {
+            let mut new_resources = resources.clone();
+            new_resources.ore -= blueprint.cost_obsidian_robot.ore;
+            new_resources.clay -= blueprint.cost_obsidian_robot.clay;
+
+            new_resources.ore += robots.ore;
+            new_resources.clay += robots.clay;
+            new_resources.obsidian += robots.obsidian;
+            new_resources.geode += robots.geode;
+
+            let mut new_robots = robots.clone();
+            new_robots.obsidian += 1;
+
+            max_geodes = max(
+                max_geodes,
+                aux_new_thread_two(blueprint.clone(), new_resources, new_robots, time - 1),
+            );
+
+            obsidian_robot_built = true;
+        }
+
+        if resources.ore >= blueprint.cost_clay_robot.ore && !clay_robot_built {
+            let mut new_resources = resources.clone();
+            new_resources.ore -= blueprint.cost_clay_robot.ore;
+
+            new_resources.ore += robots.ore;
+            new_resources.clay += robots.clay;
+            new_resources.obsidian += robots.obsidian;
+            new_resources.geode += robots.geode;
+
+            let mut new_robots = robots.clone();
+            new_robots.clay += 1;
+
+            max_geodes = max(
+                max_geodes,
+                aux_new_thread_two(blueprint.clone(), new_resources, new_robots, time - 1),
+            );
+
+            clay_robot_built = true;
+        }
+
+        if resources.ore >= blueprint.cost_ore_robot.ore && !ore_robot_built {
+            let mut new_resources = resources.clone();
+            new_resources.ore -= blueprint.cost_ore_robot.ore;
+
+            new_resources.ore += robots.ore;
+            new_resources.clay += robots.clay;
+            new_resources.obsidian += robots.obsidian;
+            new_resources.geode += robots.geode;
+
+            let mut new_robots = robots.clone();
+            new_robots.ore += 1;
+
+            max_geodes = max(
+                max_geodes,
+                aux_new_thread_two(blueprint.clone(), new_resources, new_robots, time - 1),
+            );
+
+            ore_robot_built = true;
+        }
+
+        resources.ore += robots.ore;
+        resources.clay += robots.clay;
+        resources.obsidian += robots.obsidian;
+        resources.geode += robots.geode;
+    }
+
+    max_geodes
+}
+
 fn start_new_thread_two(
     blueprint: Blueprint,
     resources: Resources,
@@ -465,70 +590,6 @@ fn start_new_thread_two(
                 return max_geodes;
             }
 
-            if resources.ore >= blueprint.cost_ore_robot.ore && !ore_robot_built {
-                let mut new_resources = resources.clone();
-                new_resources.ore -= blueprint.cost_ore_robot.ore;
-
-                new_resources.ore += robots.ore;
-                new_resources.clay += robots.clay;
-                new_resources.obsidian += robots.obsidian;
-                new_resources.geode += robots.geode;
-
-                let mut new_robots = robots.clone();
-                new_robots.ore += 1;
-
-                max_geodes = max(
-                    max_geodes,
-                    aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
-                );
-
-                ore_robot_built = true;
-            }
-
-            if resources.ore >= blueprint.cost_clay_robot.ore && !clay_robot_built {
-                let mut new_resources = resources.clone();
-                new_resources.ore -= blueprint.cost_clay_robot.ore;
-
-                new_resources.ore += robots.ore;
-                new_resources.clay += robots.clay;
-                new_resources.obsidian += robots.obsidian;
-                new_resources.geode += robots.geode;
-
-                let mut new_robots = robots.clone();
-                new_robots.clay += 1;
-
-                max_geodes = max(
-                    max_geodes,
-                    aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
-                );
-
-                clay_robot_built = true;
-            }
-
-            if resources.ore >= blueprint.cost_obsidian_robot.ore
-                && resources.clay >= blueprint.cost_obsidian_robot.clay
-                && !obsidian_robot_built
-            {
-                let mut new_resources = resources.clone();
-                new_resources.ore -= blueprint.cost_obsidian_robot.ore;
-                new_resources.clay -= blueprint.cost_obsidian_robot.clay;
-
-                new_resources.ore += robots.ore;
-                new_resources.clay += robots.clay;
-                new_resources.obsidian += robots.obsidian;
-                new_resources.geode += robots.geode;
-
-                let mut new_robots = robots.clone();
-                new_robots.obsidian += 1;
-
-                max_geodes = max(
-                    max_geodes,
-                    aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
-                );
-
-                obsidian_robot_built = true;
-            }
-
             if resources.ore >= blueprint.cost_geode_robot.ore
                 && resources.obsidian >= blueprint.cost_geode_robot.obsidian
                 && !geode_robot_built
@@ -547,10 +608,72 @@ fn start_new_thread_two(
 
                 max_geodes = max(
                     max_geodes,
-                    aux_new_thread(blueprint.clone(), new_resources, new_robots, time - 1),
+                    aux_new_thread_two(blueprint.clone(), new_resources, new_robots, time - 1),
                 );
 
                 geode_robot_built = true;
+            } else if resources.ore >= blueprint.cost_obsidian_robot.ore
+                && resources.clay >= blueprint.cost_obsidian_robot.clay
+                && !obsidian_robot_built
+            {
+                let mut new_resources = resources.clone();
+                new_resources.ore -= blueprint.cost_obsidian_robot.ore;
+                new_resources.clay -= blueprint.cost_obsidian_robot.clay;
+
+                new_resources.ore += robots.ore;
+                new_resources.clay += robots.clay;
+                new_resources.obsidian += robots.obsidian;
+                new_resources.geode += robots.geode;
+
+                let mut new_robots = robots.clone();
+                new_robots.obsidian += 1;
+
+                max_geodes = max(
+                    max_geodes,
+                    aux_new_thread_two(blueprint.clone(), new_resources, new_robots, time - 1),
+                );
+
+                obsidian_robot_built = true;
+            }
+
+            if resources.ore >= blueprint.cost_clay_robot.ore && !clay_robot_built {
+                let mut new_resources = resources.clone();
+                new_resources.ore -= blueprint.cost_clay_robot.ore;
+
+                new_resources.ore += robots.ore;
+                new_resources.clay += robots.clay;
+                new_resources.obsidian += robots.obsidian;
+                new_resources.geode += robots.geode;
+
+                let mut new_robots = robots.clone();
+                new_robots.clay += 1;
+
+                max_geodes = max(
+                    max_geodes,
+                    aux_new_thread_two(blueprint.clone(), new_resources, new_robots, time - 1),
+                );
+
+                clay_robot_built = true;
+            }
+
+            if resources.ore >= blueprint.cost_ore_robot.ore && !ore_robot_built {
+                let mut new_resources = resources.clone();
+                new_resources.ore -= blueprint.cost_ore_robot.ore;
+
+                new_resources.ore += robots.ore;
+                new_resources.clay += robots.clay;
+                new_resources.obsidian += robots.obsidian;
+                new_resources.geode += robots.geode;
+
+                let mut new_robots = robots.clone();
+                new_robots.ore += 1;
+
+                max_geodes = max(
+                    max_geodes,
+                    aux_new_thread_two(blueprint.clone(), new_resources, new_robots, time - 1),
+                );
+
+                ore_robot_built = true;
             }
 
             resources.ore += robots.ore;
