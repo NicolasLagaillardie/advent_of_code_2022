@@ -21,8 +21,8 @@ Personal Rust attempts at the [Advent of Code 2022](https://adventofcode.com/202
 | Day 15 | :heavy_check_mark: | :heavy_check_mark: |
 | Day 16 | :heavy_check_mark: |                    |
 | Day 17 | :heavy_check_mark: |                    |
-| Day 18 |                    |                    |
-| Day 19 |                    |                    |
+| Day 18 | :heavy_check_mark: | :heavy_check_mark: |
+| Day 19 | :heavy_check_mark: | :heavy_check_mark: |
 | Day 20 |                    |                    |
 | Day 21 |                    |                    |
 | Day 22 |                    |                    |

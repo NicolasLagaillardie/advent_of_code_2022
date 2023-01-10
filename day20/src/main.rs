@@ -4,11 +4,13 @@ use std::io::{stdin, BufRead, BufReader};
 use std::path::Path;
 
 /// Function for part 01
-fn aux_one(file: &Path) -> u64 {
+fn aux_one(file: &Path) -> i32 {
     // Open file
     let file = File::open(file).unwrap();
 
     let reader = BufReader::new(file);
+
+    let mut list = Vec::new();
 
     // Read file line by line, for part 01
     // Get composition of each monkey
@@ -17,16 +19,34 @@ fn aux_one(file: &Path) -> u64 {
         let line = line.unwrap();
         let line = line.trim();
 
-        let blueprint_info = line.split("Blueprint ").collect::<Vec<_>>()[1];
+        list.push(line.parse::<i32>().unwrap());
     }
 
-    let mut result = 0;
+    println!("{list:?}");
 
-    result
+    let mut index_moving_elt = 0;
+
+    for _ in list.clone().iter() {
+        let elt = list[index_moving_elt as usize];
+
+        let index = if index_moving_elt + elt < 0 {
+            let modulo = (index_moving_elt + elt).abs() % list.len() as i32;
+            list.len() as i32 - modulo
+        } else {
+            index_moving_elt + elt % list.len() as i32
+        };
+        list.swap(index as usize, index_moving_elt as usize);
+
+        index_moving_elt -= elt - 1;
+
+        println!("{list:?}");
+    }
+
+    list[1000 % list.len()] + list[2000 % list.len()] + list[3000 % list.len()]
 }
 
 /// Function for part 02
-fn aux_two(_file: &Path) -> u64 {
+fn aux_two(_file: &Path) -> i32 {
     0
 }
 
